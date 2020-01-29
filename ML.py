@@ -7,13 +7,15 @@ Created on Sun Jan 26 10:30:23 2020
 """
 import MDAnalysis
 import numpy as np
+from numpy.linalg import norm
 import tqdm
-structure = 'test.tpr'
+import os
+structure = os.path.sep.join(["test_inputs/coarse_step8_production_3.gro"])
+tpr = os.path.sep.join(["test_inputs/coarse_step8_production_3.tpr"])
 trajectory = ''
-#u= MDAnalysis.Universe(structure, trajectory)
 
-lipid_resnames = ['DAPE','DLPE','DOPE','DPPE', 'POPE', 'PIPE', 'DPPC', 'PIPC', 'PAPC', 'POPC', 'PAPS', 'POPS', 'PGPS', 'DBSM', 'DXSM', 'DPSM']
-
+#lipid_resnames = ['DAPE','DLPE','DOPE','DPPE', 'POPE', 'PIPE', 'DPPC', 'PIPC', 'PAPC', 'POPC', 'PAPS', 'POPS', 'PGPS', 'DBSM', 'DXSM', 'DPSM']
+lipid_resnames= ['DOPC', 'DPPC']
 def find_sn(lipid_resnames, structure):
     u = MDAnalysis.Universe(structure)
     sn_dict = dict.fromkeys(lipid_resnames)
@@ -43,4 +45,49 @@ def find_sn(lipid_resnames, structure):
         sn_dict[key] = sn1_sel, sn2_sel
     return sn_dict
 
-Dic = find_sn(lipid_resnames,structure)
+Dic = find_sn(lipid_resnames,tpr)
+
+u = MDAnalysis.Universe(structure)
+
+def find_thickness(lipid_resnames, tpr_file):
+    thickness_dictionary = dict.fromkeys(lipid_resnames)
+    for key in tqdm.tqdm(Dic.keys()):
+        lipids = u.select_atoms(f'resname {key}', updating=True)
+        thicknesses = {res.resid:[] for res in lipids.residues}
+        for res in lipids.residues:
+    
+            sn1_atoms = res.atoms.select_atoms(f'name {Dic.get(key)[0]}')
+            sn2_atoms = res.atoms.select_atoms(f'name {Dic.get(key)[1]}')
+        
+            sn1_thickness = np.max(sn1_atoms.positions[:,2]) -\
+                np.min(sn1_atoms.positions[:,2])
+            sn2_thickness = np.max(sn2_atoms.positions[:,2]) -\
+                np.min(sn2_atoms.positions[:,2])
+        
+            thicknesses[res.resid].append(
+                (sn1_thickness + sn2_thickness) / 2.0
+            )
+        thickness_dictionary[key] = thicknesses
+    return thickness_dictionary
+
+def find_angle(lipid_resnames, tpr_file):
+    angles_dictionary = dict.fromkeys(lipid_resnames)
+    for key in tqdm.tqdm(Dic.keys()):
+        lipids = u.select_atoms(f'resname {key}', updating=True)
+        angles = {res.resid:[] for res in lipids.residues}
+        for res in lipids.residues:
+    
+            sn1_first = res.atoms.select_atoms(f'name {Dic.get(key)[0].split()[0]}').center_of_geometry()
+            sn1_last = res.atoms.select_atoms(f'name {Dic.get(key)[0].split()[-1]}').center_of_geometry()
+            sn2_last = res.atoms.select_atoms(f'name {Dic.get(key)[1].split()[-1]}').center_of_geometry()
+            
+            vec_sn1 = sn1_first - sn1_last
+            vec_sn2 = sn1_first - sn2_last
+                
+            angle = np.arccos(np.dot(vec_sn1, vec_sn2)/(norm(vec_sn1) * norm(vec_sn2)))
+            
+            angles[res.resid].append(np.rad2deg(angle))
+            
+        angles_dictionary[key] = angles
+        
+    return angles_dictionary
