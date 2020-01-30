@@ -19,6 +19,13 @@ trajectory = ''
 #lipid_resnames = ['DAPE','DLPE','DOPE','DPPE', 'POPE', 'PIPE', 'DPPC', 'PIPC', 'PAPC', 'POPC', 'PAPS', 'POPS', 'PGPS', 'DBSM', 'DXSM', 'DPSM']
 lipid_resnames= ['DOPC', 'DPPC']
 def find_sn(lipid_resnames, tpr_file):
+    
+    """
+    
+    This function identifies the two sn chains in phospholipids and saves
+    their atomnames for later use.
+    
+    """
     u = MDAnalysis.Universe(tpr_file)
     sn_dict = dict.fromkeys(lipid_resnames)
     for key in tqdm.tqdm(sn_dict.keys()):
@@ -31,6 +38,8 @@ def find_sn(lipid_resnames, tpr_file):
         #Finds the bead with the most number of bonds (this is the first bead of sn1 chain)
         l = np.concatenate(l)
         sn1_atom = np.bincount(l).argmax()
+        #T he first atom of the sn2 chain has one higher index number than 
+        # the first atom of the sn1 chain by MARTINI convention.
         sn2_atom = sn1_atom+1
         
         sn1_sel = ''
@@ -39,6 +48,8 @@ def find_sn(lipid_resnames, tpr_file):
         sn1_sel += str(m.select_atoms(f'index {sn1_atom}').names[0])+' '
         sn2_sel += str(m.select_atoms(f'index {sn2_atom}').names[0])+' '
         
+        # By MARTINI convention carbon atomnames end in 'A' and 'B' for sn1
+        # and sn2 chains respectively. 
         for i in m.names:
             if i[2] == 'A':
                 sn1_sel += i + ' '
@@ -57,10 +68,18 @@ def calc_dist(p1, p2):
     return math.sqrt(x_dist * x_dist + y_dist * y_dist)
   
 def find_thickness(lipid_resnames, universe, sn_dic):
+    """
+    
+    Calculates the thickness of the bilayer by calculating the distances
+    the highest and lowest atoms in both sn chains and returns their average.
+    
+    """
     thickness_dictionary = dict.fromkeys(lipid_resnames)
     for key in tqdm.tqdm(sn_dic.keys()):
+        
         lipids = universe.select_atoms(f'resname {key}', updating=True)
         thicknesses = {res.resid:[] for res in lipids.residues}
+        
         for res in lipids.residues:
     
             sn1_atoms = res.atoms.select_atoms(f'name {sn_dic.get(key)[0]}')
@@ -78,6 +97,13 @@ def find_thickness(lipid_resnames, universe, sn_dic):
     return thickness_dictionary
 
 def find_angle(lipid_resnames, universe, sn_dic):
+    """
+    Calculates the angle between the last atom in the sn1 chain, the first atom
+    in the sn1-chain and the last atom of the sn2 chain.
+    
+    Represents the angle between the two chains.
+    
+    """
     angles_dictionary = dict.fromkeys(lipid_resnames)
     for key in tqdm.tqdm(sn_dic.keys()):
         lipids = universe.select_atoms(f'resname {key}', updating=True)
@@ -100,6 +126,12 @@ def find_angle(lipid_resnames, universe, sn_dic):
     return angles_dictionary
 
 def find_dist(lipid_resnames, universe, sn_dic):
+    
+    """
+    Finds the relative distance in X-Y space between the first and last atoms
+    of both sn chains.
+    
+    """
     
     dist_dictionary = dict.fromkeys(lipid_resnames)
     
