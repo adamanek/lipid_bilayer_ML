@@ -117,9 +117,10 @@ def find_dist(lipid_resnames, universe, sn_dic):
                         np.concatenate(distance_array(sn1_atoms[0].position, sn1_atoms[-1].position))[0])
             sn2_dist = (calc_dist(sn2_atoms[0].position, sn2_atoms[-1].position) /
                         np.concatenate(distance_array(sn2_atoms[0].position, sn2_atoms[-1].position))[0])
-
-            distances[res.resid].append((sn1_dist + sn2_dist) / 2)
             
+            # Need to decide whether to do average of both sn chains or save both
+            #distances[res.resid].append((sn1_dist + sn2_dist) / 2)
+            distances[res.resid].append((sn1_dist, sn2_dist))              
         dist_dictionary[key] = distances
         
     return dist_dictionary
