@@ -11,13 +11,15 @@ from numpy.linalg import norm
 import tqdm
 import os
 import math
+import pandas as pd
 from MDAnalysis.analysis.distances import distance_array
-structure = os.path.sep.join(["test_inputs/coarse_step8_production_3.gro"])
-tpr = os.path.sep.join(["test_inputs/coarse_step8_production_3.tpr"])
-trajectory = ''
+
+structure = os.path.sep.join(["test_inputs/step7_production.gro"])
+tpr = os.path.sep.join(["test_inputs/step7_production.tpr"])
+trajectory = os.path.sep.join(["test_inputs/step7_production.xtc"])
 
 #lipid_resnames = ['DAPE','DLPE','DOPE','DPPE', 'POPE', 'PIPE', 'DPPC', 'PIPC', 'PAPC', 'POPC', 'PAPS', 'POPS', 'PGPS', 'DBSM', 'DXSM', 'DPSM']
-lipid_resnames= ['DOPC', 'DPPC']
+lipid_resnames= ['DOPC']
 def find_sn(lipid_resnames, tpr_file):
     
     """
@@ -28,7 +30,7 @@ def find_sn(lipid_resnames, tpr_file):
     """
     u = MDAnalysis.Universe(tpr_file)
     sn_dict = dict.fromkeys(lipid_resnames)
-    for key in tqdm.tqdm(sn_dict.keys()):
+    for key in (sn_dict.keys()):
         fir_lip = u.select_atoms(f'resname {key}')[0].resid
         m = u.select_atoms(f'resid {fir_lip}')
         f = m.bonds
@@ -45,8 +47,8 @@ def find_sn(lipid_resnames, tpr_file):
         sn1_sel = ''
         sn2_sel = ''
               
-        sn1_sel += str(m.select_atoms(f'index {sn1_atom}').names[0])+' '
-        sn2_sel += str(m.select_atoms(f'index {sn2_atom}').names[0])+' '
+        sn1_sel += str(m.select_atoms(f'bynum {sn1_atom + 1}').names[0])+' '
+        sn2_sel += str(m.select_atoms(f'bynum {sn2_atom + 1}').names[0])+' '
         
         # By MARTINI convention carbon atomnames end in 'A' and 'B' for sn1
         # and sn2 chains respectively. 
@@ -58,16 +60,14 @@ def find_sn(lipid_resnames, tpr_file):
         sn_dict[key] = sn1_sel, sn2_sel
     return sn_dict
 
-Dic = find_sn(lipid_resnames,tpr)
 
-u = MDAnalysis.Universe(structure)
 
 def calc_dist(p1, p2):
     x_dist = (p2[0] - p1[0])
     y_dist = (p2[1] - p1[1])
     return math.sqrt(x_dist * x_dist + y_dist * y_dist)
   
-def find_thickness(lipid_resnames, universe, sn_dic):
+def find_thickness(lipid_resnames, lipids, sn_dic, thic):
     """
     
     Calculates the thickness of the bilayer by calculating the distances
@@ -75,10 +75,8 @@ def find_thickness(lipid_resnames, universe, sn_dic):
     
     """
     thickness_dictionary = dict.fromkeys(lipid_resnames)
-    for key in tqdm.tqdm(sn_dic.keys()):
+    for key in (sn_dic.keys()):
         
-        lipids = universe.select_atoms(f'resname {key}', updating=True)
-        thicknesses = {res.resid:[] for res in lipids.residues}
         
         for res in lipids.residues:
     
@@ -96,7 +94,7 @@ def find_thickness(lipid_resnames, universe, sn_dic):
         thickness_dictionary[key] = thicknesses
     return thickness_dictionary
 
-def find_angle(lipid_resnames, universe, sn_dic):
+def find_angle(lipid_resnames, lipids, sn_dic, ang):
     """
     Calculates the angle between the last atom in the sn1 chain, the first atom
     in the sn1-chain and the last atom of the sn2 chain.
@@ -105,9 +103,7 @@ def find_angle(lipid_resnames, universe, sn_dic):
     
     """
     angles_dictionary = dict.fromkeys(lipid_resnames)
-    for key in tqdm.tqdm(sn_dic.keys()):
-        lipids = universe.select_atoms(f'resname {key}', updating=True)
-        angles = {res.resid:[] for res in lipids.residues}
+    for key in (sn_dic.keys()):
         for res in lipids.residues:
     
             sn1_first = res.atoms.select_atoms(f'name {sn_dic.get(key)[0].split()[0]}').center_of_geometry()
@@ -125,7 +121,7 @@ def find_angle(lipid_resnames, universe, sn_dic):
         
     return angles_dictionary
 
-def find_dist(lipid_resnames, universe, sn_dic):
+def find_dist(lipid_resnames, lipids, sn_dic, dist):
     
     """
     Finds the relative distance in X-Y space between the first and last atoms
@@ -135,10 +131,7 @@ def find_dist(lipid_resnames, universe, sn_dic):
     
     dist_dictionary = dict.fromkeys(lipid_resnames)
     
-    for key in tqdm.tqdm(sn_dic.keys()):
-        
-        lipids = universe.select_atoms(f'resname {key}', updating=True)
-        distances = {res.resid:[] for res in lipids.residues}
+    for key in (sn_dic.keys()):
         
         for res in lipids.residues:
             
@@ -151,8 +144,49 @@ def find_dist(lipid_resnames, universe, sn_dic):
                         np.concatenate(distance_array(sn2_atoms[0].position, sn2_atoms[-1].position))[0])
             
             # Need to decide whether to do average of both sn chains or save both
-            #distances[res.resid].append((sn1_dist + sn2_dist) / 2)
-            distances[res.resid].append((sn1_dist, sn2_dist))              
+            distances[res.resid].append((sn1_dist + sn2_dist) / 2)
+            #distances[res.resid].append((sn1_dist, sn2_dist))              
         dist_dictionary[key] = distances
         
     return dist_dictionary
+
+def make_array_var(dictionary, array):
+    Q = dictionary[lipid_type]
+    dis_array = []
+    
+    for key in Q:
+        dis_array.append(Q[key])
+    dis_array = np.concatenate(dis_array)
+    
+    return array.append(dis_array)
+
+
+Dic = find_sn(lipid_resnames,tpr)
+u = MDAnalysis.Universe(structure, trajectory)
+for lipid_type in lipid_resnames:
+    
+    lipids = u.select_atoms(f'resname {lipid_type}', updating=True)
+    array_all_var = []
+    thicknesses = {res.resid:[] for res in lipids.residues}
+    angles = {res.resid:[] for res in lipids.residues}
+    distances = {res.resid:[] for res in lipids.residues}        
+    
+    for tf in tqdm.tqdm(u.trajectory[-10:-1:1]):
+        
+        dis_thick = find_thickness(lipid_resnames,lipids,Dic, thicknesses)
+        dis_ang = find_angle(lipid_resnames,lipids,Dic, angles)
+        dis_dis = find_dist(lipid_resnames,lipids,Dic, distances)
+    
+    
+    make_array_var(dis_thick,array_all_var)
+    make_array_var(dis_ang,array_all_var)
+    make_array_var(dis_dis,array_all_var)
+
+    df = pd.DataFrame(np.transpose(array_all_var))
+    df.to_csv(os.path.sep.join(["output", f"training_set_{lipid_type}.csv"]), index = False, header = False)
+    
+
+    
+        
+
+    
