@@ -14,9 +14,9 @@ import math
 import pandas as pd
 from MDAnalysis.analysis.distances import distance_array
 
-structure = os.path.sep.join(["test_inputs/step7_production.gro"])
-tpr = os.path.sep.join(["test_inputs/step7_production.tpr"])
-trajectory = os.path.sep.join(["test_inputs/step7_production.xtc"])
+structure = os.path.sep.join(["test_inputs/DOPC/step7_production.gro"])
+tpr = os.path.sep.join(["test_inputs/DOPC/step7_production.tpr"])
+trajectory = os.path.sep.join(["test_inputs/DOPC/step7_production.xtc"])
 
 #lipid_resnames = ['DAPE','DLPE','DOPE','DPPE', 'POPE', 'PIPE', 'DPPC', 'PIPC', 'PAPC', 'POPC', 'PAPS', 'POPS', 'PGPS', 'DBSM', 'DXSM', 'DPSM']
 lipid_resnames= ['DOPC']
@@ -171,7 +171,7 @@ for lipid_type in lipid_resnames:
     angles = {res.resid:[] for res in lipids.residues}
     distances = {res.resid:[] for res in lipids.residues}        
     
-    for tf in tqdm.tqdm(u.trajectory[-10:-1:1]):
+    for tf in tqdm.tqdm(u.trajectory[-100:-1:1]):
         
         dis_thick = find_thickness(lipid_resnames,lipids,Dic, thicknesses)
         dis_ang = find_angle(lipid_resnames,lipids,Dic, angles)
@@ -181,7 +181,7 @@ for lipid_type in lipid_resnames:
     make_array_var(dis_thick,array_all_var)
     make_array_var(dis_ang,array_all_var)
     make_array_var(dis_dis,array_all_var)
-
+    array_all_var.append(np.full([len(array_all_var[0])], f'{lipid_type}'))
     df = pd.DataFrame(np.transpose(array_all_var))
     df.to_csv(os.path.sep.join(["output", f"training_set_{lipid_type}.csv"]), index = False, header = False)
     
