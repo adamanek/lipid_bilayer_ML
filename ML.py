@@ -14,9 +14,11 @@ import math
 import pandas as pd
 from MDAnalysis.analysis.distances import distance_array
 
-structure = os.path.sep.join(["test_inputs/DOPC/step7_production.gro"])
-tpr = os.path.sep.join(["test_inputs/DOPC/step7_production.tpr"])
-trajectory = os.path.sep.join(["test_inputs/DOPC/step7_production.xtc"])
+structure = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/coarseMD/Paul_coarse/coarse_step8_production_4.gro"])
+tpr = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/coarseMD/Paul_coarse/coarse_step8_production_4.tpr"])
+#trajectory = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/coarseMD/Paul_coarse/coarse_step8_production_4.trr"])
+
+
 
 #lipid_resnames = ['DAPE','DLPE','DOPE','DPPE', 'POPE', 'PIPE', 'DPPC', 'PIPC', 'PAPC', 'POPC', 'PAPS', 'POPS', 'PGPS', 'DBSM', 'DXSM', 'DPSM']
 lipid_resnames= ['DOPC']
@@ -162,7 +164,7 @@ def make_array_var(dictionary, array):
 
 
 Dic = find_sn(lipid_resnames,tpr)
-u = MDAnalysis.Universe(structure, trajectory)
+u = MDAnalysis.Universe(structure)
 for lipid_type in lipid_resnames:
     
     lipids = u.select_atoms(f'resname {lipid_type}', updating=True)
@@ -171,19 +173,23 @@ for lipid_type in lipid_resnames:
     angles = {res.resid:[] for res in lipids.residues}
     distances = {res.resid:[] for res in lipids.residues}        
     
-    for tf in tqdm.tqdm(u.trajectory[-100:-1:1]):
+    #for tf in tqdm.tqdm(u.trajectory[-1]):
         
-        dis_thick = find_thickness(lipid_resnames,lipids,Dic, thicknesses)
-        dis_ang = find_angle(lipid_resnames,lipids,Dic, angles)
-        dis_dis = find_dist(lipid_resnames,lipids,Dic, distances)
+    dis_thick = find_thickness(lipid_resnames,lipids,Dic, thicknesses)
+    dis_ang = find_angle(lipid_resnames,lipids,Dic, angles)
+    dis_dis = find_dist(lipid_resnames,lipids,Dic, distances)
     
-    
+    positions = u.select_atoms(f'resname {lipid_type} and type P', updating=True).positions[:,0:2]
+    resnames = u.select_atoms(f'resname {lipid_type} and type P', updating=True).resnames
+    pf = pd.concat([pd.DataFrame(positions), pd.DataFrame(resnames)], axis = 1)    
+    pf.to_csv(os.path.sep.join(["output", f"positions_{lipid_type}.csv"]), index = False, header = False)
+   
     make_array_var(dis_thick,array_all_var)
     make_array_var(dis_ang,array_all_var)
     make_array_var(dis_dis,array_all_var)
     array_all_var.append(np.full([len(array_all_var[0])], f'{lipid_type}'))
     df = pd.DataFrame(np.transpose(array_all_var))
-    df.to_csv(os.path.sep.join(["output", f"training_set_{lipid_type}.csv"]), index = False, header = False)
+    df.to_csv(os.path.sep.join(["output", f"test_set_{lipid_type}.csv"]), index = False, header = False)
     
 
     
