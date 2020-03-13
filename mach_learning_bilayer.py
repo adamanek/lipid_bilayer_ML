@@ -26,8 +26,8 @@ def one_hot_encode_object_array(arr):
     return np_utils.to_categorical(ids, len(uniques))
 
 np.set_printoptions(suppress=True)
-DOPC_train = pd.read_csv('output/training_set_DOPC.csv', header = None)
-DPPC_train = pd.read_csv('output/training_set_DPPC.csv', header = None)
+DOPC_train = pd.read_csv('output/train_set_DOPC_dis.csv', header = None)
+DPPC_train = pd.read_csv('output/train_set_DPPC_ord.csv', header = None)
 dataset_train = pd.concat([DOPC_train,DPPC_train], axis = 0).values
 X = dataset_train[:,0:3]
 y = dataset_train[:,3]
@@ -47,12 +47,12 @@ opt = SGD(lr=config.MIN_LR, momentum=0.9)
 model = Sequential()
 model.add(Dense(12,input_dim=3, activation='relu'))
 #model.add(Dropout(0.05))
-model.add(Dense(12,activation='relu'))
+model.add(Dense(24,activation='relu'))
 model.add(Dense(2, activation='softmax'))
 
-model.compile(loss='binary_crossentropy', 
+model.compile(loss='categorical_crossentropy', 
               optimizer = 'adam', 
-              metrics=['accuracy', 'binary_crossentropy'])
+              metrics=['accuracy', 'categorical_crossentropy'])
 
 
 # initialize the cyclical learning rate callback
@@ -88,10 +88,10 @@ print(classification_report(y_test.argmax(axis=1),
 print('Accuracy on test data: {}% \n Error on test data: {}'.format(scores2[1], 1 - scores2[1]))    
 
 #Using real Boris Bike data to see how accurate the model is
-DOPC_test = pd.read_csv('output/test_set_DOPC.csv', header = None)
-DPPC_test = pd.read_csv('output/test_set_DPPC.csv', header = None)
-dataset_test = pd.concat([DOPC_test,DPPC_test], axis = 0)
-b_r = dataset_test.values[:,0:3]
+CGtest = pd.read_csv('output/CG_lipids_leaflet0.csv', header = None)
+#DPPC_test = pd.read_csv('output/test_set_DPPC.csv', header = None)
+#dataset_test = pd.concat([DOPC_test,DPPC_test], axis = 0)
+b_r = CGtest.values[:,0:3]
 pred_bike = model.predict(b_r)
 predictions = model.predict_classes(b_r)
 prediction_ = np.argmax(to_categorical(predictions), axis = 1)
@@ -99,17 +99,17 @@ prediction_ = encoder.inverse_transform(prediction_)
 unique_elements, count_elements = np.unique(prediction_, return_counts=True)
 
 #Plotting prediction on real set
-DOPC_pos= pd.read_csv('output/positions_DOPC.csv', header = None, names = ['X','Y','Lipid type'])
-DPPC_pos = pd.read_csv('output/positions_DPPC.csv', header = None, names = ['X','Y','Lipid type'])
-dataset_pos = pd.concat([DOPC_pos,DPPC_pos], axis = 0).values
+CG_pos= pd.read_csv('output/CG_positions_leaflet0.csv', header = None, names = ['X','Y','Lipid type'])
+#DPPC_pos = pd.read_csv('output/positions_DPPC.csv', header = None, names = ['X','Y','Lipid type'])
+#dataset_pos = pd.concat([DOPC_pos,DPPC_pos], axis = 0).values
 pred_df = pd.DataFrame(predictions, index = None).values
 
-dataset_whole = pd.DataFrame(np.concatenate([dataset_pos,pred_df], axis = 1), columns=['X','Y','Lipid Type','Order'])
+dataset_whole = pd.DataFrame(np.concatenate([CG_pos.values,pred_df], axis = 1), columns=['X','Y','Lipid Type','Order'])
 sns_plot = sns.relplot(x='X',y='Y',hue='Order', data = dataset_whole, s =10, kind = 'scatter')
 
-sns_plot.savefig('output/Order_test.png',dpi=300)
+sns_plot.savefig('output/Cg_test_leaflet0.png',dpi=300)
 
-def plot_history(histories, key='binary_crossentropy'):
+def plot_history(histories, key='categorical_crossentropy'):
   plt.figure(figsize=(16,10))
 
   for name, history in histories:
@@ -128,7 +128,7 @@ def plot_history(histories, key='binary_crossentropy'):
 
 
 plot_history([('baseline', baseline_history)])
-
+plt.savefig('output/Metrics_model.png',dpi=300)
 
 
 # construct a plot that plots and saves the training history

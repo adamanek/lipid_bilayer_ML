@@ -13,15 +13,16 @@ import os
 import math
 import pandas as pd
 from MDAnalysis.analysis.distances import distance_array
+from MDAnalysis.analysis.leaflet import LeafletFinder
 
-structure = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/coarseMD/Paul_coarse/coarse_step8_production_4.gro"])
-tpr = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/coarseMD/Paul_coarse/coarse_step8_production_4.tpr"])
-#trajectory = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/coarseMD/Paul_coarse/coarse_step8_production_4.trr"])
+structure = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/ML/Training datsets/DOPC_CHOL/step7_production.gro"])
+tpr = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/ML/Training datsets/DOPC_CHOL/step7_production.tpr"])
+trajectory = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/ML/Training datsets/DOPC_CHOL/step7_production.trr"])
 
 
 
-#lipid_resnames = ['DAPE','DLPE','DOPE','DPPE', 'POPE', 'PIPE', 'DPPC', 'PIPC', 'PAPC', 'POPC', 'PAPS', 'POPS', 'PGPS', 'DBSM', 'DXSM', 'DPSM']
-lipid_resnames= ['DOPC']
+lipid_resnames = ['DAPE','DLPE','DOPE','DPPE', 'POPE', 'PIPE', 'DPPC', 'PIPC', 'PAPC', 'POPC', 'PAPS', 'POPS', 'PGPS', 'DBSM', 'DXSM', 'DPSM']
+#lipid_resnames= ['DOPC']
 def find_sn(lipid_resnames, tpr_file):
     
     """
@@ -69,34 +70,30 @@ def calc_dist(p1, p2):
     y_dist = (p2[1] - p1[1])
     return math.sqrt(x_dist * x_dist + y_dist * y_dist)
   
-def find_thickness(lipid_resnames, lipids, sn_dic, thic):
+def find_thickness(lipid_resnames, lipids, sn_dic, thicknesses):
     """
     
     Calculates the thickness of the bilayer by calculating the distances
     the highest and lowest atoms in both sn chains and returns their average.
     
     """
-    thickness_dictionary = dict.fromkeys(lipid_resnames)
-    for key in (sn_dic.keys()):
         
-        
-        for res in lipids.residues:
-    
-            sn1_atoms = res.atoms.select_atoms(f'name {sn_dic.get(key)[0]}')
-            sn2_atoms = res.atoms.select_atoms(f'name {sn_dic.get(key)[1]}')
-        
-            sn1_thickness = np.max(sn1_atoms.positions[:,2]) -\
-                np.min(sn1_atoms.positions[:,2])
-            sn2_thickness = np.max(sn2_atoms.positions[:,2]) -\
-                np.min(sn2_atoms.positions[:,2])
-        
-            thicknesses[res.resid].append(
-                (sn1_thickness + sn2_thickness) / 2.0
-            )
-        thickness_dictionary[key] = thicknesses
-    return thickness_dictionary
+    for res in lipids.residues:
 
-def find_angle(lipid_resnames, lipids, sn_dic, ang):
+        sn1_atoms = res.atoms.select_atoms(f'name {sn_dic.get(res.resname)[0]}')
+        sn2_atoms = res.atoms.select_atoms(f'name {sn_dic.get(res.resname)[1]}')
+    
+        sn1_thickness = np.max(sn1_atoms.positions[:,2]) -\
+            np.min(sn1_atoms.positions[:,2])
+        sn2_thickness = np.max(sn2_atoms.positions[:,2]) -\
+            np.min(sn2_atoms.positions[:,2])
+    
+        thicknesses[res.resid].append(
+            (sn1_thickness + sn2_thickness) / 2.0
+        )
+    return thicknesses
+
+def find_angle(lipid_resnames, lipids, sn_dic, angles):
     """
     Calculates the angle between the last atom in the sn1 chain, the first atom
     in the sn1-chain and the last atom of the sn2 chain.
@@ -104,24 +101,23 @@ def find_angle(lipid_resnames, lipids, sn_dic, ang):
     Represents the angle between the two chains.
     
     """
-    angles_dictionary = dict.fromkeys(lipid_resnames)
-    for key in (sn_dic.keys()):
-        for res in lipids.residues:
     
-            sn1_first = res.atoms.select_atoms(f'name {sn_dic.get(key)[0].split()[0]}').center_of_geometry()
-            sn1_last = res.atoms.select_atoms(f'name {sn_dic.get(key)[0].split()[-1]}').center_of_geometry()
-            sn2_last = res.atoms.select_atoms(f'name {sn_dic.get(key)[1].split()[-1]}').center_of_geometry()
-            
-            vec_sn1 = sn1_first - sn1_last
-            vec_sn2 = sn1_first - sn2_last
-                
-            angle = np.arccos(np.dot(vec_sn1, vec_sn2)/(norm(vec_sn1) * norm(vec_sn2)))
-            
-            angles[res.resid].append(np.rad2deg(angle))
-            
-        angles_dictionary[key] = angles
+
+    for res in lipids.residues:
+
+        sn1_first = res.atoms.select_atoms(f'name {sn_dic.get(res.resname)[0].split()[0]}').center_of_geometry()
+        sn1_last = res.atoms.select_atoms(f'name {sn_dic.get(res.resname)[0].split()[-1]}').center_of_geometry()
+        sn2_last = res.atoms.select_atoms(f'name {sn_dic.get(res.resname)[1].split()[-1]}').center_of_geometry()
         
-    return angles_dictionary
+        vec_sn1 = sn1_first - sn1_last
+        vec_sn2 = sn1_first - sn2_last
+            
+        angle = np.arccos(np.dot(vec_sn1, vec_sn2)/(norm(vec_sn1) * norm(vec_sn2)))
+        
+        angles[res.resid].append(np.rad2deg(angle))
+            
+        
+    return angles
 
 def find_dist(lipid_resnames, lipids, sn_dic, dist):
     
@@ -131,26 +127,22 @@ def find_dist(lipid_resnames, lipids, sn_dic, dist):
     
     """
     
-    dist_dictionary = dict.fromkeys(lipid_resnames)
-    
-    for key in (sn_dic.keys()):
+
+    for res in lipids.residues:
         
-        for res in lipids.residues:
-            
-            sn1_atoms = res.atoms.select_atoms(f'name {sn_dic.get(key)[0]}')
-            sn2_atoms = res.atoms.select_atoms(f'name {sn_dic.get(key)[1]}')
-            
-            sn1_dist = (calc_dist(sn1_atoms[0].position, sn1_atoms[-1].position) /
-                        np.concatenate(distance_array(sn1_atoms[0].position, sn1_atoms[-1].position))[0])
-            sn2_dist = (calc_dist(sn2_atoms[0].position, sn2_atoms[-1].position) /
-                        np.concatenate(distance_array(sn2_atoms[0].position, sn2_atoms[-1].position))[0])
-            
-            # Need to decide whether to do average of both sn chains or save both
-            distances[res.resid].append((sn1_dist + sn2_dist) / 2)
-            #distances[res.resid].append((sn1_dist, sn2_dist))              
-        dist_dictionary[key] = distances
+        sn1_atoms = res.atoms.select_atoms(f'name {sn_dic.get(res.resname)[0]}')
+        sn2_atoms = res.atoms.select_atoms(f'name {sn_dic.get(res.resname)[1]}')
         
-    return dist_dictionary
+        sn1_dist = (calc_dist(sn1_atoms[0].position, sn1_atoms[-1].position) /
+                    np.concatenate(distance_array(sn1_atoms[0].position, sn1_atoms[-1].position))[0])
+        sn2_dist = (calc_dist(sn2_atoms[0].position, sn2_atoms[-1].position) /
+                    np.concatenate(distance_array(sn2_atoms[0].position, sn2_atoms[-1].position))[0])
+        
+        # Need to decide whether to do average of both sn chains or save both
+        distances[res.resid].append((sn1_dist + sn2_dist) / 2)
+        #distances[res.resid].append((sn1_dist, sn2_dist))              
+        
+    return distances
 
 def make_array_var(dictionary, array):
     Q = dictionary[lipid_type]
@@ -164,7 +156,7 @@ def make_array_var(dictionary, array):
 
 
 Dic = find_sn(lipid_resnames,tpr)
-u = MDAnalysis.Universe(structure)
+u = MDAnalysis.Universe(structure, trajectory)
 for lipid_type in lipid_resnames:
     
     lipids = u.select_atoms(f'resname {lipid_type}', updating=True)
@@ -173,26 +165,62 @@ for lipid_type in lipid_resnames:
     angles = {res.resid:[] for res in lipids.residues}
     distances = {res.resid:[] for res in lipids.residues}        
     
-    #for tf in tqdm.tqdm(u.trajectory[-1]):
+    for tf in tqdm.tqdm(u.trajectory[-200:-1:1]):
         
-    dis_thick = find_thickness(lipid_resnames,lipids,Dic, thicknesses)
-    dis_ang = find_angle(lipid_resnames,lipids,Dic, angles)
-    dis_dis = find_dist(lipid_resnames,lipids,Dic, distances)
+        dis_thick = find_thickness(lipid_resnames,lipids,Dic, thicknesses)
+        dis_ang = find_angle(lipid_resnames,lipids,Dic, angles)
+        dis_dis = find_dist(lipid_resnames,lipids,Dic, distances)
     
-    positions = u.select_atoms(f'resname {lipid_type} and type P', updating=True).positions[:,0:2]
-    resnames = u.select_atoms(f'resname {lipid_type} and type P', updating=True).resnames
-    pf = pd.concat([pd.DataFrame(positions), pd.DataFrame(resnames)], axis = 1)    
-    pf.to_csv(os.path.sep.join(["output", f"positions_{lipid_type}.csv"]), index = False, header = False)
+#    positions = u.select_atoms(f'resname {lipid_type} and type P', updating=True).positions[:,0:2]
+#    resnames = u.select_atoms(f'resname {lipid_type} and type P', updating=True).resnames
+#    pf = pd.concat([pd.DataFrame(positions), pd.DataFrame(resnames)], axis = 1)    
+#    pf.to_csv(os.path.sep.join(["output", f"positions_{lipid_type}.csv"]), index = False, header = False)
    
     make_array_var(dis_thick,array_all_var)
     make_array_var(dis_ang,array_all_var)
     make_array_var(dis_dis,array_all_var)
-    array_all_var.append(np.full([len(array_all_var[0])], f'{lipid_type}'))
+    array_all_var.append(np.full([len(array_all_var[0])], f'{lipid_type}_CHOL'))
     df = pd.DataFrame(np.transpose(array_all_var))
-    df.to_csv(os.path.sep.join(["output", f"test_set_{lipid_type}.csv"]), index = False, header = False)
+    df.to_csv(os.path.sep.join(["output", f"train_set_{lipid_type}_CHOL.csv"]), index = False, header = False)
     
+structure = os.path.sep.join(["/media/adam/Black 4TB/CG protein/MD/step7.2_production.gro"])
+tpr = os.path.sep.join(["/media/adam/Black 4TB/CG protein/MD/step7.2_production.tpr"])
+Dic = find_sn(lipid_resnames,tpr)
+u = MDAnalysis.Universe(structure)
 
+L = LeafletFinder(u, 'type P')
+L0 = L.group(0)
+L1 = L.group(2)
+Leaflets = [L0,L1]
+i=0
+for group in Leaflets:
+    group_string = ''
+    for bead in group:
+        group_string += f'{bead.resid}' + ' '
     
-        
-
+    append_data = []
+    lip_string = ''
+    for lipid_type in lipid_resnames:
+        lip_string += lipid_type + ' '
+    lipids = u.select_atoms(f'resname {lip_string} and byres resid {group_string}', updating=True)
+    array_all_var = []
+    thicknesses = {res.resid:[] for res in lipids.residues}   
+    angles = {res.resid:[] for res in lipids.residues}
+    distances = {res.resid:[] for res in lipids.residues} 
     
+    dis_thick = find_thickness(lipid_resnames,lipids,Dic, thicknesses)
+    dis_ang = find_angle(lipid_resnames,lipids,Dic, angles)
+    dis_dis = find_dist(lipid_resnames,lipids,Dic, distances)
+    
+    all_data = np.transpose(np.vstack((np.mean(list(dis_thick.values()), axis = 1),
+                          np.mean(list(dis_ang.values()), axis = 1),
+                          np.mean(list(dis_dis.values()), axis = 1),
+                          )))
+    df = pd.DataFrame(all_data)
+    df.to_csv(os.path.sep.join(["output", f"CG_lipids_leaflet{i}.csv"]), index = False, header = False)
+    
+    positions = group.positions[:,0:2]
+    resnames = group.resnames
+    pf = pd.concat([pd.DataFrame(positions), pd.DataFrame(resnames)], axis = 1)    
+    pf.to_csv(os.path.sep.join(["output", f"CG_positions_leaflet{i}.csv"]), index = False, header = False)    
+    i +=1
