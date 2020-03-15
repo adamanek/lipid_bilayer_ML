@@ -88,7 +88,7 @@ print(classification_report(y_test.argmax(axis=1),
 print('Accuracy on test data: {}% \n Error on test data: {}'.format(scores2[1], 1 - scores2[1]))    
 
 #Using real Boris Bike data to see how accurate the model is
-CGtest = pd.read_csv('output/CG_lipids_leaflet0.csv', header = None)
+CGtest = pd.read_csv('output/CG_dian_leaflet0.csv', header = None)
 #DPPC_test = pd.read_csv('output/test_set_DPPC.csv', header = None)
 #dataset_test = pd.concat([DOPC_test,DPPC_test], axis = 0)
 b_r = CGtest.values[:,0:3]

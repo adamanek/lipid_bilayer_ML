@@ -15,14 +15,14 @@ import pandas as pd
 from MDAnalysis.analysis.distances import distance_array
 from MDAnalysis.analysis.leaflet import LeafletFinder
 
-structure = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/ML/Training datsets/DOPC_CHOL/step7_production.gro"])
-tpr = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/ML/Training datsets/DOPC_CHOL/step7_production.tpr"])
-trajectory = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/ML/Training datsets/DOPC_CHOL/step7_production.trr"])
+structure = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/coarseMD/Paul_coarse/coarse_step8_production_4.gro"])
+tpr = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/coarseMD/Paul_coarse/coarse_step8_production_4.tpr"])
+trajectory = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/coarseMD/Paul_coarse/coarse_step8_production_4.trr"])
 
 
 
-lipid_resnames = ['DAPE','DLPE','DOPE','DPPE', 'POPE', 'PIPE', 'DPPC', 'PIPC', 'PAPC', 'POPC', 'PAPS', 'POPS', 'PGPS', 'DBSM', 'DXSM', 'DPSM']
-#lipid_resnames= ['DOPC']
+#lipid_resnames = ['DAPE','DLPE','DOPE','DPPE', 'POPE', 'PIPE', 'DPPC', 'PIPC', 'PAPC', 'POPC', 'PAPS', 'POPS', 'PGPS', 'DBSM', 'DXSM', 'DPSM']
+lipid_resnames= ['DOPC', 'DPPC']
 def find_sn(lipid_resnames, tpr_file):
     
     """
@@ -186,11 +186,11 @@ for lipid_type in lipid_resnames:
 structure = os.path.sep.join(["/media/adam/Black 4TB/CG protein/MD/step7.2_production.gro"])
 tpr = os.path.sep.join(["/media/adam/Black 4TB/CG protein/MD/step7.2_production.tpr"])
 Dic = find_sn(lipid_resnames,tpr)
-u = MDAnalysis.Universe(structure)
+u = MDAnalysis.Universe(structure, trajectory)
 
 L = LeafletFinder(u, 'type P')
 L0 = L.group(0)
-L1 = L.group(2)
+L1 = L.group(1)
 Leaflets = [L0,L1]
 i=0
 for group in Leaflets:
@@ -208,19 +208,23 @@ for group in Leaflets:
     angles = {res.resid:[] for res in lipids.residues}
     distances = {res.resid:[] for res in lipids.residues} 
     
-    dis_thick = find_thickness(lipid_resnames,lipids,Dic, thicknesses)
-    dis_ang = find_angle(lipid_resnames,lipids,Dic, angles)
-    dis_dis = find_dist(lipid_resnames,lipids,Dic, distances)
-    
+    #If i want to do it over a trajectory uncomment the next line and indent everything between that loop and the next comment
+    for tf in tqdm.tqdm(u.trajectory[-100:-1:1]):
+        dis_thick = find_thickness(lipid_resnames,lipids,Dic, thicknesses)
+        dis_ang = find_angle(lipid_resnames,lipids,Dic, angles)
+        dis_dis = find_dist(lipid_resnames,lipids,Dic, distances)
+    #stop indent here
     all_data = np.transpose(np.vstack((np.mean(list(dis_thick.values()), axis = 1),
                           np.mean(list(dis_ang.values()), axis = 1),
                           np.mean(list(dis_dis.values()), axis = 1),
                           )))
     df = pd.DataFrame(all_data)
-    df.to_csv(os.path.sep.join(["output", f"CG_lipids_leaflet{i}.csv"]), index = False, header = False)
+    lip_resnames = group.resnames
+    lip_resids = group.resids
+    df = pd.concat([df, pd.DataFrame(lip_resnames),pd.DataFrame(lip_resids)], axis = 1)
+    df.to_csv(os.path.sep.join(["output", f"CG_dian_leaflet{i}.csv"]), index = False, header = False)
     
     positions = group.positions[:,0:2]
-    resnames = group.resnames
-    pf = pd.concat([pd.DataFrame(positions), pd.DataFrame(resnames)], axis = 1)    
-    pf.to_csv(os.path.sep.join(["output", f"CG_positions_leaflet{i}.csv"]), index = False, header = False)    
+    pf = pd.concat([pd.DataFrame(positions), pd.DataFrame(lip_resnames),pd.DataFrame(lip_resids)], axis = 1)    
+    pf.to_csv(os.path.sep.join(["output", f"CG_dian_positions_leaflet{i}.csv"]), index = False, header = False)    
     i +=1
