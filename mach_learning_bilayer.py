@@ -45,15 +45,16 @@ opt = SGD(lr=config.MIN_LR, momentum=0.9)
 
 #making the ML model
 model = Sequential()
-model.add(Dense(30,input_dim=3, activation='relu'))
-model.add(Dropout(0.05))
+model.add(Dense(12,input_dim=3, activation='relu'))
+model.add(Dense(32, activation = 'relu'))
 model.add(Dense(64,activation='relu'))
+model.add(Dropout(0.05))
 model.add(Dense(24, activation = 'relu'))
 model.add(Dense(2, activation='softmax'))
 
-model.compile(loss='categorical_crossentropy', 
+model.compile(loss='binary_crossentropy', 
               optimizer = 'adam', 
-              metrics=['accuracy', 'categorical_crossentropy'])
+              metrics=['accuracy', 'binary_crossentropy'])
 
 
 # initialize the cyclical learning rate callback
@@ -88,6 +89,7 @@ print(classification_report(y_test.argmax(axis=1),
 
 print('Accuracy on test data: {}% \n Error on test data: {}'.format(scores2[1], 1 - scores2[1]))    
 
+model.save('output/model_non_aver_train.h5')
 #Using real Boris Bike data to see how accurate the model is
 CGtest = pd.read_csv('output/CG_dian_leaflet1.csv', header = None)
 #DPPC_test = pd.read_csv('output/test_set_DPPC.csv', header = None)
@@ -108,9 +110,9 @@ pred_df = pd.DataFrame(predictions, index = None).values
 dataset_whole = pd.DataFrame(np.concatenate([CG_pos.values,pred_df], axis = 1), columns=['X','Y','Lipid Type','resid','Order'])
 sns_plot = sns.relplot(x='X',y='Y',hue='Order', data = dataset_whole, s =10, kind = 'scatter')
 
-sns_plot.savefig('output/Cg_dian_test_leaflet0.png',dpi=300)
+sns_plot.savefig('output/Cg_dian_test_leaflet1_mean.png',dpi=300)
 
-def plot_history(histories, key='categorical_crossentropy'):
+def plot_history(histories, key='binary_crossentropy'):
   plt.figure(figsize=(16,10))
 
   for name, history in histories:

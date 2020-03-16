@@ -9,13 +9,13 @@ Created on Mon Aug 12 11:49:14 2019
 import os
 
 # initialize the list of class label names
-CLASSES = ["Ordered", "Disordered"]
+CLASSES = [ "Disordered", "Ordered"]
 
 # define the minimum learning rate, maximum learning rate, batch size,
 # step size, CLR method, and number of epochs
 MIN_LR = 1e-7
 MAX_LR = 1e-2
-BATCH_SIZE = 150
+BATCH_SIZE = 20
 STEP_SIZE = 8
 CLR_METHOD = "triangular"
 NUM_EPOCHS = 32

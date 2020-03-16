@@ -15,14 +15,14 @@ import pandas as pd
 from MDAnalysis.analysis.distances import distance_array
 from MDAnalysis.analysis.leaflet import LeafletFinder
 
-structure = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/ML/Training datsets/disorderdDOPC/step7.1_production.gro"])
-tpr = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/ML/Training datsets/disorderdDOPC/step7.1_production.tpr"])
-trajectory = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/ML/Training datsets/disorderdDOPC/step7.1_production.trr"])
+structure = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/ML/Training datsets/DPPC_CHOL/step7_production.gro"])
+tpr = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/ML/Training datsets/DPPC_CHOL/step7_production.tpr"])
+trajectory = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/ML/Training datsets/DPPC_CHOL/step7_production.trr"])
 
 
 
 #lipid_resnames = ['DAPE','DLPE','DOPE','DPPE', 'POPE', 'PIPE', 'DPPC', 'PIPC', 'PAPC', 'POPC', 'PAPS', 'POPS', 'PGPS', 'DBSM', 'DXSM', 'DPSM']
-lipid_resnames= ['DOPC']
+lipid_resnames= ['DPPC']
 def find_sn(lipid_resnames, tpr_file):
     
     """
@@ -184,30 +184,39 @@ for lipid_type in lipid_resnames:
         dis_ang = find_angle(lipid_resnames,lipids,Dic, angles)
         dis_dis = find_dist(lipid_resnames,lipids,Dic, distances)
     
-#    positions = u.select_atoms(f'resname {lipid_type} and type P', updating=True).positions[:,0:2]
-#    resnames = u.select_atoms(f'resname {lipid_type} and type P', updating=True).resnames
-#    pf = pd.concat([pd.DataFrame(positions), pd.DataFrame(resnames)], axis = 1)    
-#    pf.to_csv(os.path.sep.join(["output", f"positions_{lipid_type}.csv"]), index = False, header = False)
     
-    make_array_var(dis_thick,alla)
-    make_array_var(dis_ang,alla)
-    make_array_var(dis_dis,alla)
+    #This commented out section is for getting all the values in 2D Matrix
     
-    #following code comment is for mean
-#    all_data = np.transpose(np.vstack((np.mean(list(dis_thick.values()), axis = 1),
-#                          np.mean(list(dis_ang.values()), axis = 1),
-#                          np.mean(list(dis_dis.values()), axis = 1),
-#                          np.full([len(dis_thick)], f'{lipid_type}')
-#                          )))
-    alla.append(np.full([len(alla[0])], f'{lipid_type}'))
-    df = pd.DataFrame(np.transpose(alla))
-    df.to_csv(os.path.sep.join(["output", f"train_set_{lipid_type}_disord.csv"]), index = False, header = False)
+#    make_array_var(dis_thick,alla)
+#    make_array_var(dis_ang,alla)
+#    make_array_var(dis_dis,alla)
+#    alla.append(np.full([len(alla[0])], f'{lipid_type}'))
+#    df = pd.DataFrame(np.transpose(alla))
+    
+    #Getting all the values in a 3D matrix
+    
+    matrix3D = [list(dis_thick.values()),
+                 list(dis_ang.values()),
+                 list(dis_dis.values()),
+                 ['Ordered'] * len(dis_ang.values())
+                 ]
+    np.save(f'output/train_set_{lipid_type}_ord_3D.npy',matrix3D)
+
+    #following code comment is for mean of each value for each lipid
+    all_data = np.transpose(np.vstack((np.mean(list(dis_thick.values()), axis = 1),
+                          np.mean(list(dis_ang.values()), axis = 1),
+                          np.mean(list(dis_dis.values()), axis = 1),
+                          np.full([len(dis_thick)], 'Ordered')
+                          )))
+    df = pd.DataFrame(all_data)   
+    df.to_csv(os.path.sep.join(["output", f"train_set_{lipid_type}_ord_mean.csv"]), index = False, header = False)
     
 structure = os.path.sep.join(["/media/adam/Black 4TB/CG protein/MD/step7.2_production.gro"])
 tpr = os.path.sep.join(["/media/adam/Black 4TB/CG protein/MD/step7.2_production.tpr"])
+trajectory = os.path.sep.join(["/media/adam/Black 4TB/CG protein/MD/step7.2_production.trr"])
+
 Dic = find_sn(lipid_resnames,tpr)
 u = MDAnalysis.Universe(structure, trajectory)
-
 L = LeafletFinder(u, 'type P')
 L0 = L.group(0)
 L1 = L.group(1)
@@ -229,7 +238,7 @@ for group in Leaflets:
     distances = {res.resid:[] for res in lipids.residues} 
     
     #If i want to do it over a trajectory uncomment the next line and indent everything between that loop and the next comment
-    for tf in tqdm.tqdm(u.trajectory[-10:-1:1]):
+    for tf in tqdm.tqdm(u.trajectory[-200:-1:1]):
         dis_thick = find_thickness(lipid_resnames,lipids,Dic, thicknesses)
         dis_ang = find_angle(lipid_resnames,lipids,Dic, angles)
         dis_dis = find_dist(lipid_resnames,lipids,Dic, distances)
@@ -243,6 +252,15 @@ for group in Leaflets:
     lip_resids = group.resids
     df = pd.concat([df, pd.DataFrame(lip_resnames),pd.DataFrame(lip_resids)], axis = 1)
     df.to_csv(os.path.sep.join(["output", f"CG_dian_leaflet{i}.csv"]), index = False, header = False)
+    
+    matrix3D = [list(dis_thick.values()),
+             list(dis_ang.values()),
+             list(dis_dis.values()),
+             list(lip_resnames),
+             list(lip_resids)
+             ]
+    np.save(f'output/train_set_{lipid_type}_ord_3D.npy',matrix3D)
+
     
     positions = group.positions[:,0:2]
     pf = pd.concat([pd.DataFrame(positions), pd.DataFrame(lip_resnames),pd.DataFrame(lip_resids)], axis = 1)    
