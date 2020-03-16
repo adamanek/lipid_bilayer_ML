@@ -26,7 +26,7 @@ def one_hot_encode_object_array(arr):
     return np_utils.to_categorical(ids, len(uniques))
 
 np.set_printoptions(suppress=True)
-DOPC_train = pd.read_csv('output/train_set_DOPC_dis.csv', header = None)
+DOPC_train = pd.read_csv('output/train_set_DOPC_disord.csv', header = None)
 DPPC_train = pd.read_csv('output/train_set_DPPC_ord.csv', header = None)
 dataset_train = pd.concat([DOPC_train,DPPC_train], axis = 0).values
 X = dataset_train[:,0:3]
@@ -45,9 +45,10 @@ opt = SGD(lr=config.MIN_LR, momentum=0.9)
 
 #making the ML model
 model = Sequential()
-model.add(Dense(12,input_dim=3, activation='relu'))
-#model.add(Dropout(0.05))
-model.add(Dense(24,activation='relu'))
+model.add(Dense(30,input_dim=3, activation='relu'))
+model.add(Dropout(0.05))
+model.add(Dense(64,activation='relu'))
+model.add(Dense(24, activation = 'relu'))
 model.add(Dense(2, activation='softmax'))
 
 model.compile(loss='categorical_crossentropy', 
@@ -88,7 +89,7 @@ print(classification_report(y_test.argmax(axis=1),
 print('Accuracy on test data: {}% \n Error on test data: {}'.format(scores2[1], 1 - scores2[1]))    
 
 #Using real Boris Bike data to see how accurate the model is
-CGtest = pd.read_csv('output/CG_dian_leaflet0.csv', header = None)
+CGtest = pd.read_csv('output/CG_dian_leaflet1.csv', header = None)
 #DPPC_test = pd.read_csv('output/test_set_DPPC.csv', header = None)
 #dataset_test = pd.concat([DOPC_test,DPPC_test], axis = 0)
 b_r = CGtest.values[:,0:3]
@@ -99,15 +100,15 @@ prediction_ = encoder.inverse_transform(prediction_)
 unique_elements, count_elements = np.unique(prediction_, return_counts=True)
 
 #Plotting prediction on real set
-CG_pos= pd.read_csv('output/CG_positions_leaflet0.csv', header = None, names = ['X','Y','Lipid type'])
+CG_pos= pd.read_csv('output/CG_dian_positions_leaflet1.csv', header = None, names = ['X','Y','Lipid type','resid'])
 #DPPC_pos = pd.read_csv('output/positions_DPPC.csv', header = None, names = ['X','Y','Lipid type'])
 #dataset_pos = pd.concat([DOPC_pos,DPPC_pos], axis = 0).values
 pred_df = pd.DataFrame(predictions, index = None).values
 
-dataset_whole = pd.DataFrame(np.concatenate([CG_pos.values,pred_df], axis = 1), columns=['X','Y','Lipid Type','Order'])
+dataset_whole = pd.DataFrame(np.concatenate([CG_pos.values,pred_df], axis = 1), columns=['X','Y','Lipid Type','resid','Order'])
 sns_plot = sns.relplot(x='X',y='Y',hue='Order', data = dataset_whole, s =10, kind = 'scatter')
 
-sns_plot.savefig('output/Cg_test_leaflet0.png',dpi=300)
+sns_plot.savefig('output/Cg_dian_test_leaflet0.png',dpi=300)
 
 def plot_history(histories, key='categorical_crossentropy'):
   plt.figure(figsize=(16,10))
