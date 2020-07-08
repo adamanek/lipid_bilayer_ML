@@ -15,14 +15,14 @@ import pandas as pd
 from MDAnalysis.analysis.distances import distance_array
 from MDAnalysis.analysis.leaflet import LeafletFinder
 
-structure = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/ML/Training datsets/DPPC_CHOL/step7_production.gro"])
-tpr = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/ML/Training datsets/DPPC_CHOL/step7_production.tpr"])
-trajectory = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/ML/Training datsets/DPPC_CHOL/step7_production.trr"])
+structure = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/ML/Training datsets/DOPC_CHOL/step7_production.gro"])
+tpr = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/ML/Training datsets/DOPC_CHOL/step7_production.tpr"])
+trajectory = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/ML/Training datsets/DOPC_CHOL/step7_production.xtc"])
 
 
 
 #lipid_resnames = ['DAPE','DLPE','DOPE','DPPE', 'POPE', 'PIPE', 'DPPC', 'PIPC', 'PAPC', 'POPC', 'PAPS', 'POPS', 'PGPS', 'DBSM', 'DXSM', 'DPSM']
-lipid_resnames= ['DPPC']
+lipid_resnames= ['DOPC']
 def find_sn(lipid_resnames, tpr_file):
     
     """
@@ -198,22 +198,22 @@ for lipid_type in lipid_resnames:
     matrix3D = [list(dis_thick.values()),
                  list(dis_ang.values()),
                  list(dis_dis.values()),
-                 ['Ordered'] * len(dis_ang.values())
                  ]
-    np.save(f'output/train_set_{lipid_type}_ord_3D.npy',matrix3D)
-
+    label = ['DOPC CHOL'] * len(dis_ang.values())
+    np.save(f'output/train_set_{lipid_type}_CHOL_3D.npy',matrix3D)
+    np.save(f'output/train_set_{lipid_type}_CHOL_3D_label.npy', label)
     #following code comment is for mean of each value for each lipid
     all_data = np.transpose(np.vstack((np.mean(list(dis_thick.values()), axis = 1),
                           np.mean(list(dis_ang.values()), axis = 1),
                           np.mean(list(dis_dis.values()), axis = 1),
-                          np.full([len(dis_thick)], 'Ordered')
+                          np.full([len(dis_thick)], 'DOPC CHOL')
                           )))
     df = pd.DataFrame(all_data)   
-    df.to_csv(os.path.sep.join(["output", f"train_set_{lipid_type}_ord_mean.csv"]), index = False, header = False)
+    df.to_csv(os.path.sep.join(["output", f"train_set_{lipid_type}_CHOL_mean.csv"]), index = False, header = False)
     
-structure = os.path.sep.join(["/media/adam/Black 4TB/CG protein/MD/step7.2_production.gro"])
-tpr = os.path.sep.join(["/media/adam/Black 4TB/CG protein/MD/step7.2_production.tpr"])
-trajectory = os.path.sep.join(["/media/adam/Black 4TB/CG protein/MD/step7.2_production.trr"])
+structure = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/coarseMD/Paul_coarse/coarse_step8_production_4.gro"])
+tpr = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/coarseMD/Paul_coarse/coarse_step8_production_4.tpr"])
+trajectory = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/coarseMD/Paul_coarse/coarse_step8_production_4.trr"])
 
 Dic = find_sn(lipid_resnames,tpr)
 u = MDAnalysis.Universe(structure, trajectory)
@@ -247,22 +247,24 @@ for group in Leaflets:
                           np.mean(list(dis_ang.values()), axis = 1),
                           np.mean(list(dis_dis.values()), axis = 1),
                           )))
-    df = pd.DataFrame(all_data)
+#    df = pd.DataFrame(all_data)
     lip_resnames = group.resnames
     lip_resids = group.resids
-    df = pd.concat([df, pd.DataFrame(lip_resnames),pd.DataFrame(lip_resids)], axis = 1)
-    df.to_csv(os.path.sep.join(["output", f"CG_dian_leaflet{i}.csv"]), index = False, header = False)
+#    df = pd.concat([df, pd.DataFrame(lip_resnames),pd.DataFrame(lip_resids)], axis = 1)
+#    df.to_csv(os.path.sep.join(["output", f"CG_dian_leaflet{i}.csv"]), index = False, header = False)
     
     matrix3D = [list(dis_thick.values()),
              list(dis_ang.values()),
              list(dis_dis.values()),
-             list(lip_resnames),
-             list(lip_resids)
              ]
-    np.save(f'output/train_set_{lipid_type}_ord_3D.npy',matrix3D)
+    labels = [list(lip_resnames),
+             list(lip_resids)]
+    np.save(f'output/real_set_dian_DOPC_DPPC_3D_leaflet{i}.npy',matrix3D)
+    np.save(f'output/real_set_dian_DOPC_DPPC_3D_leaflet{i}_labels.npy',labels)
+
 
     
     positions = group.positions[:,0:2]
     pf = pd.concat([pd.DataFrame(positions), pd.DataFrame(lip_resnames),pd.DataFrame(lip_resids)], axis = 1)    
-    pf.to_csv(os.path.sep.join(["output", f"CG_dian_positions_leaflet{i}.csv"]), index = False, header = False)    
+    pf.to_csv(os.path.sep.join(["output", f"real_set_dian_DOPC_DPPC_3D_positions_leaflet{i}.csv"]), index = False, header = False)    
     i +=1
