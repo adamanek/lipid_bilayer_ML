@@ -22,7 +22,7 @@ trajectory = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulat
 
 
 #lipid_resnames = ['DAPE','DLPE','DOPE','DPPE', 'POPE', 'PIPE', 'DPPC', 'PIPC', 'PAPC', 'POPC', 'PAPS', 'POPS', 'PGPS', 'DBSM', 'DXSM', 'DPSM']
-lipid_resnames= ['DOPC']
+lipid_resnames= ['DOPC','DPPC']
 def find_sn(lipid_resnames, tpr_file):
     
     """
@@ -211,33 +211,40 @@ for lipid_type in lipid_resnames:
     df = pd.DataFrame(all_data)   
     df.to_csv(os.path.sep.join(["output", f"train_set_{lipid_type}_CHOL_mean.csv"]), index = False, header = False)
     
-structure = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/coarseMD/Paul_coarse/coarse_step8_production_4.gro"])
-tpr = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/coarseMD/Paul_coarse/coarse_step8_production_4.tpr"])
-trajectory = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/coarseMD/Paul_coarse/coarse_step8_production_4.trr"])
+structure = os.path.sep.join(["/media/adam/Black 4TB1/CG dian_laurdan/laurdan/md_laurdan_coarse_part5.gro"])
+tpr = os.path.sep.join(["/media/adam/Black 4TB1/CG dian_laurdan/laurdan/md_laurdan_coarse_part5.tpr"])
+trajectory = os.path.sep.join(["/media/adam/Black 4TB1/CG dian_laurdan/laurdan/last5ns_part5.xtc"])
 
 Dic = find_sn(lipid_resnames,tpr)
 u = MDAnalysis.Universe(structure, trajectory)
-L = LeafletFinder(u, 'type P')
+L = LeafletFinder(u, 'type P', cutoff=10, pbc=True, sparse = False)
 L0 = L.group(0)
 L1 = L.group(1)
 Leaflets = [L0,L1]
 i=0
+L0 = u.select_atoms('type P and (prop z >40)')
+L1 = u.select_atoms('type P and (prop z <40)')
+Leaflets = [L0,L1]
+
 for group in Leaflets:
     group_string = ''
     for bead in group:
         group_string += f'{bead.resid}' + ' '
-    
+    print('got here0')
     append_data = []
     lip_string = ''
     for lipid_type in lipid_resnames:
         lip_string += lipid_type + ' '
     lipids = u.select_atoms(f'resname {lip_string} and byres resid {group_string}', updating=True)
+    print('got here')
     array_all_var = []
     thicknesses = {res.resid:[] for res in lipids.residues}   
     angles = {res.resid:[] for res in lipids.residues}
     distances = {res.resid:[] for res in lipids.residues} 
     
     #If i want to do it over a trajectory uncomment the next line and indent everything between that loop and the next comment
+    print('got here2')
+
     for tf in tqdm.tqdm(u.trajectory[-200:-1:1]):
         dis_thick = find_thickness(lipid_resnames,lipids,Dic, thicknesses)
         dis_ang = find_angle(lipid_resnames,lipids,Dic, angles)
@@ -259,12 +266,12 @@ for group in Leaflets:
              ]
     labels = [list(lip_resnames),
              list(lip_resids)]
-    np.save(f'output/real_set_dian_DOPC_DPPC_3D_leaflet{i}.npy',matrix3D)
-    np.save(f'output/real_set_dian_DOPC_DPPC_3D_leaflet{i}_labels.npy',labels)
+    np.save(f'output/large_real_set_dian_DOPC_DPPC_3D_leaflet{i}.npy',matrix3D)
+    np.save(f'output/large_real_set_dian_DOPC_DPPC_3D_leaflet{i}_labels.npy',labels)
 
 
     
     positions = group.positions[:,0:2]
     pf = pd.concat([pd.DataFrame(positions), pd.DataFrame(lip_resnames),pd.DataFrame(lip_resids)], axis = 1)    
-    pf.to_csv(os.path.sep.join(["output", f"real_set_dian_DOPC_DPPC_3D_positions_leaflet{i}.csv"]), index = False, header = False)    
+    pf.to_csv(os.path.sep.join(["output", f"large_real_dian_DOPC_DPPC_3D_positions_leaflet{i}.csv"]), index = False, header = False)    
     i +=1

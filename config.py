@@ -9,7 +9,7 @@ Created on Mon Aug 12 11:49:14 2019
 import os
 
 # initialize the list of class label names
-CLASSES = [ "Disordered", "Ordered", "DOPC CHOL"]
+CLASSES = [ "Ordered", "Disordered"]
 
 # define the minimum learning rate, maximum learning rate, batch size,
 # step size, CLR method, and number of epochs
