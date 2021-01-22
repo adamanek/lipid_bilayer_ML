@@ -146,9 +146,9 @@ model.save('output/model_mean_stdev_DPPC_DOPC.h5')
 #Using real Boris Bike data to see how accurate the model is
 model = keras.models.load_model('output/model_mean_stdev_DPPC_DOPC.h5')
 
-B_leaflet0 = np.load('output/di4_real_set_protein_mean_leaflet1.npy', allow_pickle=True)
+B_leaflet0 = np.load('output/laurdan_real_set_dian_DOPC_DPPC_mean_leaflet0_24.npy', allow_pickle=True)
 #B_leaflet0 = np.transpose(B_leaflet0, (1,2,0))
-B_leaflet0_label = np.load('output/di4_real_set_protein_mean_leaflet1_labels.npy', allow_pickle=True)
+B_leaflet0_label = np.load('output/laurdan_real_set_dian_DOPC_DPPC_mean_leaflet0_labels_24.npy', allow_pickle=True)
 
 #CGtest = pd.read_csv('output/CG_dian_leaflet1.csv', header = None)
 #DPPC_test = pd.read_csv('output/test_set_DPPC.csv', header = None)
@@ -161,7 +161,7 @@ prediction_ = encoder.inverse_transform(prediction_)
 unique_elements, count_elements = np.unique(prediction_, return_counts=True)
 
 #Plotting prediction on real set
-CG_pos= pd.read_csv('output/di4_real_protein_mean_positions_leaflet1.csv', header = None, names = ['X','Y','Lipid type','resid'])
+CG_pos= pd.read_csv('output/laurdan_real_dian_DOPC_DPPC_mean_positions_leaflet0_24.csv', header = None, names = ['X','Y','Lipid type','resid'])
 #DPPC_pos = pd.read_csv('output/positions_DPPC.csv', header = None, names = ['X','Y','Lipid type'])
 #dataset_pos = pd.concat([DOPC_pos,DPPC_pos], axis = 0).values
 pred_df = pd.DataFrame(prediction_, index = None).values

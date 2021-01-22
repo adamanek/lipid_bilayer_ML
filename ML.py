@@ -329,13 +329,13 @@ for group in Leaflets:
              ]
     labels = [list(lip_resnames),
              list(lip_resids)]
-    np.save(f'output/real_set_protein_mean_leaflet{i}_20.npy',all_data)
-    np.save(f'output/real_set_protein_mean_leaflet{i}_labels_20.npy',labels)
+    np.save(f'output/real_set_simple_laurdan_mean_leaflet{i}_24.npy',all_data)
+    np.save(f'output/real_set_simple_laurdan_mean_leaflet{i}_labels_24.npy',labels)
 
     
     positions = group.positions[:,0:2]
     pf = pd.concat([pd.DataFrame(positions), pd.DataFrame(lip_resnames),pd.DataFrame(lip_resids)], axis = 1)    
-    pf.to_csv(os.path.sep.join(["output", f"real_set_protein_mean_positions_leaflet{i}_20.csv"]), index = False, header = False)    
+    pf.to_csv(os.path.sep.join(["output", f"real_set_simple_laurdan_mean_leaflet{i}_24.csv"]), index = False, header = False)    
     i +=1
     
 structure = os.path.sep.join(["/media/adam/My Passport1/CG protein/di-4/MD/step8_3_production_dian.gro"])
