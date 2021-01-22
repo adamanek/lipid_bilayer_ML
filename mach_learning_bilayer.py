@@ -45,25 +45,25 @@ def plot_history(histories, key='categorical_crossentropy'):
 
 
 np.set_printoptions(suppress=True)
-DOPC_train = pd.read_csv('output/train_set_DOPC_disord.csv', header = None)
-DPPC_train = pd.read_csv('output/train_set_DPPC_ord.csv', header = None)
+DOPC_train = pd.read_csv('output/train_set_DOPC_CHOL_mean.csv', header = None)
+DPPC_train = pd.read_csv('output/train_set_DPPC_CHOL_mean.csv', header = None)
 dataset_train = pd.concat([DOPC_train,DPPC_train], axis = 0).values
-X = dataset_train[:,0:3]
-y = dataset_train[:,3]
+X = dataset_train[:,0:6]
+y = dataset_train[:,6]
 
 
 #split the simulated data into training and testing data
-D_label = np.load('output/train_set_DPPC_ord_3D_label.npy', allow_pickle = True)
-O_label = np.load('output/train_set_DOPC_ord_3D_label.npy', allow_pickle = True)
-O_CHOL_label = np.load('output/train_set_DOPC_CHOL_3D_label.npy', allow_pickle = True)
-
-
-O = np.load('output/train_set_DOPC_ord_3D_new.npy', allow_pickle = True)
-D = np.load('output/train_set_DPPC_ord_3D.npy', allow_pickle = True)
-O_CHOL = np.load('output/train_set_DOPC_CHOL_3D.npy', allow_pickle = True)
-
-y= np.concatenate((D_label, O_CHOL_label))
-X = np.concatenate((D,O_CHOL), axis = 1)
+#D_label = np.load('output/train_set_DPPC_ord_3D_label.npy', allow_pickle = True)
+#O_label = np.load('output/train_set_DOPC_ord_3D_label.npy', allow_pickle = True)
+#O_CHOL_label = np.load('output/train_set_DOPC_CHOL_3D_label.npy', allow_pickle = True)
+#
+#
+#O = np.load('output/train_set_DOPC_ord_3D_new.npy', allow_pickle = True)
+#D = np.load('output/train_set_DPPC_ord_3D.npy', allow_pickle = True)
+#O_CHOL = np.load('output/train_set_DOPC_CHOL_3D.npy', allow_pickle = True)
+#
+#y= np.concatenate((D_label, O_CHOL_label))
+#X = np.concatenate((D,O_CHOL), axis = 1)
 
 #change classes from strings to binary matrix
 encoder = LabelEncoder()
@@ -73,13 +73,13 @@ y = np_utils.to_categorical(y)
 
 
 
-X = np.transpose(X, (1,2,0))
-all_indices = list(range(len(X)))
-train_indices, test_indices = train_test_split(all_indices, test_size=0.30, shuffle='True')
-X_train = X[train_indices,:,:]
-X_test = X[test_indices,:,:]
-y_train = y[train_indices]
-y_test = y[test_indices]
+#X = np.transpose(X, (1,2,0))
+#all_indices = list(range(len(X)))
+#train_indices, test_indices = train_test_split(all_indices, test_size=0.30, shuffle='True')
+#X_train = X[train_indices,:,:]
+#X_test = X[test_indices,:,:]
+#y_train = y[train_indices]
+#y_test = y[test_indices]
 
 
 
@@ -90,14 +90,16 @@ opt = SGD(lr=config.MIN_LR, momentum=0.9)
 #making the ML model
 model = Sequential()
 #model.add(Conv2D(32,kernel_size=(3,3),input_shape=(X_train.shape), activation='relu'))
-model.add(Dense(24,input_shape = (199,3), activation = 'relu'))
+#model.add(Dense(24,input_shape = (199,3), activation = 'relu'))
+model.add(Dense(24,input_dim = 6, activation = 'relu'))
+
 #model.add(Dropout(0.1))
 
 model.add(Dropout(0.1))
 #model.add(Dense(24,activation='relu'))
 model.add(Dense(12, activation = 'relu'))
-model.add(Dropout(0.05))
-model.add(Flatten())
+#model.add(Dropout(0.05))
+#model.add(Flatten())
 model.add(Dropout(0.05))
 model.add(Dense(2, activation='softmax'))
 
@@ -138,15 +140,15 @@ print(classification_report(y_test.argmax(axis=1),
 
 print('Accuracy on test data: {}% \n Error on test data: {}'.format(scores2[1], 1 - scores2[1]))    
 plot_history([('baseline', baseline_history)])
-plt.savefig('output/Metrics_3Dmodel.png',dpi=300)
+plt.savefig('output/Metrics_model.png',dpi=300)
 
-model.save('output/model_3D_DPPC_DOPC.h5')
+model.save('output/model_mean_stdev_DPPC_DOPC.h5')
 #Using real Boris Bike data to see how accurate the model is
-model = keras.models.load_model('output/model_3D_DPPC_DOPC.h5')
+model = keras.models.load_model('output/model_mean_stdev_DPPC_DOPC.h5')
 
-B_leaflet0 = np.load('output/large_real_set_dian_DOPC_DPPC_3D_leaflet0.npy', allow_pickle=True)
-B_leaflet0 = np.transpose(B_leaflet0, (1,2,0))
-B_leaflet0_label = np.load('output/large_real_set_dian_DOPC_DPPC_3D_leaflet0_labels.npy', allow_pickle=True)
+B_leaflet0 = np.load('output/di4_real_set_protein_mean_leaflet1.npy', allow_pickle=True)
+#B_leaflet0 = np.transpose(B_leaflet0, (1,2,0))
+B_leaflet0_label = np.load('output/di4_real_set_protein_mean_leaflet1_labels.npy', allow_pickle=True)
 
 #CGtest = pd.read_csv('output/CG_dian_leaflet1.csv', header = None)
 #DPPC_test = pd.read_csv('output/test_set_DPPC.csv', header = None)
@@ -159,15 +161,17 @@ prediction_ = encoder.inverse_transform(prediction_)
 unique_elements, count_elements = np.unique(prediction_, return_counts=True)
 
 #Plotting prediction on real set
-CG_pos= pd.read_csv('output/real_set_dian_DOPC_DPPC_3D_positions_leaflet0.csv', header = None, names = ['X','Y','Lipid type','resid'])
+CG_pos= pd.read_csv('output/di4_real_protein_mean_positions_leaflet1.csv', header = None, names = ['X','Y','Lipid type','resid'])
 #DPPC_pos = pd.read_csv('output/positions_DPPC.csv', header = None, names = ['X','Y','Lipid type'])
 #dataset_pos = pd.concat([DOPC_pos,DPPC_pos], axis = 0).values
 pred_df = pd.DataFrame(prediction_, index = None).values
 
 dataset_whole = pd.DataFrame(np.concatenate([CG_pos.values,pred_df], axis = 1), columns=['X','Y','Lipid Type','resid','Order'])
-sns_plot = sns.relplot(x='X',y='Y',hue='Order', data = dataset_whole, s =10, kind = 'scatter')
-dataset_whole.to_csv('output/predicted_whole_real_leaflet0_3D.csv')
-sns_plot.savefig('output/Real_set_dian_test_leaflet0_3D_categorical.png',dpi=300)
+g = sns.relplot(x='X',y='Y',hue='Lipid Type', data = dataset_whole, s =20, kind = 'scatter')
+g.fig.set_size_inches(15,15)
+
+dataset_whole.to_csv('output/di4_real_set_protein_mean_leaflet1.csv')
+g.savefig('output/di4_real_set_protein_mean_leaflet1.png',dpi=300)
 
 
 
@@ -175,18 +179,18 @@ sns_plot.savefig('output/Real_set_dian_test_leaflet0_3D_categorical.png',dpi=300
 
 # construct a plot that plots and saves the training history
 # =============================================================================
-# N = np.arange(0, config.NUM_EPOCHS)
-# plt.style.use("ggplot")
-# plt.figure(figsize=(16,10))
-# plt.plot(N, baseline_history.history["loss"], label="train_loss")
-# plt.plot(N, baseline_history.history["val_loss"], label="val_loss")
-# plt.plot(N, baseline_history.history["acc"], label="train_acc")
-# plt.plot(N, baseline_history.history["val_acc"], label="val_acc")
-# plt.title("Training Loss and Accuracy")
-# plt.xlabel("Epoch #")
-# plt.ylabel("Loss/Accuracy")
-# plt.legend(loc="lower left")
-# plt.savefig(config.TRAINING_PLOT_PATH)
+N = np.arange(0, config.NUM_EPOCHS)
+plt.style.use("ggplot")
+plt.figure(figsize=(16,10))
+plt.plot(N, baseline_history.history["loss"], label="train_loss")
+plt.plot(N, baseline_history.history["val_loss"], label="val_loss")
+plt.plot(N, baseline_history.history["acc"], label="train_acc")
+plt.plot(N, baseline_history.history["val_acc"], label="val_acc")
+plt.title("Training Loss and Accuracy")
+plt.xlabel("Epoch #")
+plt.ylabel("Loss/Accuracy")
+plt.legend(loc="lower left")
+plt.savefig(config.TRAINING_PLOT_PATH)
 # =============================================================================
  
 # plot the learning rate history
@@ -229,12 +233,12 @@ for r in range(len(vor.point_region)):
     if not -1 in region:
         polygon = [vor.vertices[i] for i in region]
         plt.fill(*zip(*polygon), color=mapper.to_rgba(predictions[r]))
-plt.xlim([0,530]), plt.ylim([0,530])
+plt.xlim([0,570]), plt.ylim([0,570])
 plt.xlabel('x'), plt.ylabel('y')
 plt.legend(patch,["Disordered","Ordered"], bbox_to_anchor=(0.5, 1.1), ncol=2, loc='upper center')
 
-fig.set_size_inches(6,6)
+fig.set_size_inches(15,15)
 plt.show()
-fig.savefig('output/predicted_order_voronoi.png',dpi=300)
+fig.savefig('output/predicted_order_voronoi_large_di4_14frames.png',dpi=300)
 
 

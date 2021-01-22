@@ -18,7 +18,7 @@ MAX_LR = 1e-2
 BATCH_SIZE = 20
 STEP_SIZE = 8
 CLR_METHOD = "triangular"
-NUM_EPOCHS = 80
+NUM_EPOCHS = 160
 
 # define the path to the output training history plot and cyclical
 # learning rate plot

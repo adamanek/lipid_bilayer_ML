@@ -15,14 +15,6 @@ import pandas as pd
 from MDAnalysis.analysis.distances import distance_array
 from MDAnalysis.analysis.leaflet import LeafletFinder
 
-structure = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/ML/Training datsets/DOPC_CHOL/step7_production.gro"])
-tpr = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/ML/Training datsets/DOPC_CHOL/step7_production.tpr"])
-trajectory = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/ML/Training datsets/DOPC_CHOL/step7_production.xtc"])
-
-
-
-#lipid_resnames = ['DAPE','DLPE','DOPE','DPPE', 'POPE', 'PIPE', 'DPPC', 'PIPC', 'PAPC', 'POPC', 'PAPS', 'POPS', 'PGPS', 'DBSM', 'DXSM', 'DPSM']
-lipid_resnames= ['DOPC','DPPC']
 def find_sn(lipid_resnames, tpr_file):
     
     """
@@ -127,7 +119,7 @@ def find_angle(lipid_resnames, lipids, sn_dic, angles):
         
     return angles
 
-def find_dist(lipid_resnames, lipids, sn_dic, dist):
+def find_dist(lipid_resnames, lipids, sn_dic, distances):
     
     """
     Finds the relative distance in X-Y space between the first and last atoms
@@ -168,22 +160,87 @@ def make_array_var(dictionary, array):
     
     return array.append(dis_array)
 
+   
+def find_variables(lipid_resnames, lipids, sn_dic, thicknesses, angles, distances):
+    for res in lipids.residues:
+        #Distances and thickness calculation
+        sn1_atoms = res.atoms.select_atoms(f'name {sn_dic.get(res.resname)[0]}')
+        sn2_atoms = res.atoms.select_atoms(f'name {sn_dic.get(res.resname)[1]}')
+        sn1_len = []
+        sn2_len = []
+        for i in range(len(sn1_atoms.positions)-1):
+            dis = distance_array(sn1_atoms.positions[i], sn1_atoms.positions[i+1])
+            sn1_len.append(dis)
+        for i in range(len(sn2_atoms.positions)-1):
+            dis = distance_array(sn2_atoms.positions[i], sn2_atoms.positions[i+1])
+            sn2_len.append(dis)
 
-Dic = find_sn(lipid_resnames,tpr)
-u = MDAnalysis.Universe(structure, trajectory)
-for lipid_type in lipid_resnames:
-    
-    lipids = u.select_atoms(f'resname {lipid_type}', updating=True)
-    thicknesses = {res.resid:[] for res in lipids.residues}
-    angles = {res.resid:[] for res in lipids.residues}
-    distances = {res.resid:[] for res in lipids.residues}        
-    alla = []
-    for tf in tqdm.tqdm(u.trajectory[-200:-1:1]):
+        sn1_dist = calc_dist(sn1_atoms[0].position, sn1_atoms[-1].position) / np.concatenate(sum(sn1_len))[0]
+        sn2_dist = calc_dist(sn2_atoms[0].position, sn2_atoms[-1].position) / np.concatenate(sum(sn2_len))[0]
+        distances[res.resid].append((sn1_dist + sn2_dist) / 2)       
+        #Angle calculation
+
+        sn1_first = res.atoms.select_atoms(f'name {sn_dic.get(res.resname)[0].split()[0]}').center_of_geometry()
+        sn1_last = res.atoms.select_atoms(f'name {sn_dic.get(res.resname)[0].split()[-1]}').center_of_geometry()
+        sn2_last = res.atoms.select_atoms(f'name {sn_dic.get(res.resname)[1].split()[-1]}').center_of_geometry()
         
-        dis_thick = find_thickness(lipid_resnames,lipids,Dic, thicknesses)
-        dis_ang = find_angle(lipid_resnames,lipids,Dic, angles)
-        dis_dis = find_dist(lipid_resnames,lipids,Dic, distances)
+        vec_sn1 = sn1_first - sn1_last
+        vec_sn2 = sn1_first - sn2_last
+            
+        angle = np.arccos(np.dot(vec_sn1, vec_sn2)/(norm(vec_sn1) * norm(vec_sn2)))
+        
+        angles[res.resid].append(np.rad2deg(angle))
+        
+        #Thickness calculation
+        sn1_thickness = (np.max(sn1_atoms.positions[:,2]) -\
+                         np.min(sn1_atoms.positions[:,2])) / np.concatenate(sum(sn1_len))[0]
+        sn2_thickness = (np.max(sn2_atoms.positions[:,2]) -\
+                         np.min(sn2_atoms.positions[:,2])) / np.concatenate(sum(sn2_len))[0]
+        
+        thicknesses[res.resid].append(
+        (sn1_thickness + sn2_thickness) / 2.0
+        )
+
+    return thicknesses,angles,distances
+
     
+    
+    
+lipid_resnames= ['DOPC','DPPC']
+
+for lipid_type in lipid_resnames:
+    structure = os.path.sep.join([f"/media/adam/My Passport/Data Backup/Data/simulations/ML/Training datsets/{lipid_type}_CHOL/step7_production.gro"])
+    tpr = os.path.sep.join([f"/media/adam/My Passport/Data Backup/Data/simulations/ML/Training datsets/{lipid_type}_CHOL/step7_production.tpr"])
+    trajectory = os.path.sep.join([f"/media/adam/My Passport/Data Backup/Data/simulations/ML/Training datsets/{lipid_type}_CHOL/step7_production.xtc"])
+        
+    Dic = find_sn([lipid_type],tpr)
+    u = MDAnalysis.Universe(structure, trajectory)
+
+    thick =[]
+    ang =[]
+    dis =[]
+    for i in range(10):
+        lipids = u.select_atoms(f'resname {lipid_type}', updating=True)
+        thicknesses = {res.resid:[] for res in lipids.residues}
+        angles = {res.resid:[] for res in lipids.residues}
+        distances = {res.resid:[] for res in lipids.residues}        
+        alla = []    
+        start_traj = -(i+1)*100
+        end_traj = (-1-(i*100))
+        for tf in tqdm.tqdm(u.trajectory[start_traj:end_traj:1]):
+            
+            find_thickness(lipid_resnames,lipids,Dic, thicknesses)
+            find_angle(lipid_resnames,lipids,Dic, angles)
+            find_dist(lipid_resnames,lipids,Dic, distances)
+        thick.append(list(thicknesses.values()))
+        ang.append(list(angles.values()))
+        dis.append(list(distances.values()))
+    
+    #Concatenating lists of dictionary into one list of lists
+    
+    thick = [j for i in thick for j in i]
+    ang = [j for i in ang for j in i]
+    dis = [j for i in dis for j in i]
     
     #This commented out section is for getting all the values in 2D Matrix
     
@@ -195,35 +252,40 @@ for lipid_type in lipid_resnames:
     
     #Getting all the values in a 3D matrix
     
-    matrix3D = [list(dis_thick.values()),
-                 list(dis_ang.values()),
-                 list(dis_dis.values()),
+    matrix3D = [thick,
+                 ang,
+                 dis,
                  ]
-    label = ['DOPC CHOL'] * len(dis_ang.values())
+    label = [f'{lipid_type} CHOL'] * len(thick)
     np.save(f'output/train_set_{lipid_type}_CHOL_3D.npy',matrix3D)
     np.save(f'output/train_set_{lipid_type}_CHOL_3D_label.npy', label)
     #following code comment is for mean of each value for each lipid
-    all_data = np.transpose(np.vstack((np.mean(list(dis_thick.values()), axis = 1),
-                          np.mean(list(dis_ang.values()), axis = 1),
-                          np.mean(list(dis_dis.values()), axis = 1),
-                          np.full([len(dis_thick)], 'DOPC CHOL')
+    all_data = np.transpose(np.vstack((np.mean(thick, axis = 1),
+                                       np.std(thick, axis = 1),
+                          np.mean(ang, axis = 1),
+                          np.std(ang, axis = 1),
+                          np.mean(dis, axis = 1),
+                          np.std(dis, axis = 1),
+                          np.full([len(thick)], f'{lipid_type} CHOL')
                           )))
     df = pd.DataFrame(all_data)   
     df.to_csv(os.path.sep.join(["output", f"train_set_{lipid_type}_CHOL_mean.csv"]), index = False, header = False)
-    
-structure = os.path.sep.join(["/media/adam/Black 4TB1/CG dian_laurdan/laurdan/md_laurdan_coarse_part5.gro"])
-tpr = os.path.sep.join(["/media/adam/Black 4TB1/CG dian_laurdan/laurdan/md_laurdan_coarse_part5.tpr"])
-trajectory = os.path.sep.join(["/media/adam/Black 4TB1/CG dian_laurdan/laurdan/last5ns_part5.xtc"])
+   
+lipid_resnames = ['DAPE','DLPE','DOPE','DPPE', 'POPE', 'PIPE', 'DPPC', 'PIPC', 'PAPC', 'POPC', 'PAPS', 'POPS', 'PGPS', 'DBSM', 'DXSM', 'DPSM']
+structure = os.path.sep.join(["/media/adam/My Passport/CG dian_laurd_backup from drive/laurdan/md_laurdan_coarse_part5.gro"])
+tpr = os.path.sep.join(["/media/adam/My Passport/CG dian_laurd_backup from drive/laurdan/md_laurdan_coarse_part5.tpr"])
+trajectory = os.path.sep.join(["/media/adam/My Passport/CG dian_laurd_backup from drive/laurdan/last5ns_part5.xtc"])
+
+structure = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/coarseMD/Paul_coarse/coarse_step8_production_4.gro"])
+tpr = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/coarseMD/Paul_coarse/coarse_step8_production_4.tpr"])
+trajectory = os.path.sep.join(["/media/adam/My Passport/Data Backup/Data/simulations/coarseMD/Paul_coarse/coarse_step8_production_4.trr"])
+
 
 Dic = find_sn(lipid_resnames,tpr)
 u = MDAnalysis.Universe(structure, trajectory)
-L = LeafletFinder(u, 'type P', cutoff=10, pbc=True, sparse = False)
-L0 = L.group(0)
-L1 = L.group(1)
-Leaflets = [L0,L1]
 i=0
-L0 = u.select_atoms('type P and (prop z >40)')
-L1 = u.select_atoms('type P and (prop z <40)')
+L0 = u.select_atoms('type P and (prop z >100)')
+L1 = u.select_atoms('type P and (prop z <100)')
 Leaflets = [L0,L1]
 
 for group in Leaflets:
@@ -245,14 +307,15 @@ for group in Leaflets:
     #If i want to do it over a trajectory uncomment the next line and indent everything between that loop and the next comment
     print('got here2')
 
-    for tf in tqdm.tqdm(u.trajectory[-200:-1:1]):
-        dis_thick = find_thickness(lipid_resnames,lipids,Dic, thicknesses)
-        dis_ang = find_angle(lipid_resnames,lipids,Dic, angles)
-        dis_dis = find_dist(lipid_resnames,lipids,Dic, distances)
+    for tf in tqdm.tqdm(u.trajectory[-20:-1:1]):
+        find_variables(lipid_resnames,lipids,Dic,thicknesses,angles,distances)
     #stop indent here
-    all_data = np.transpose(np.vstack((np.mean(list(dis_thick.values()), axis = 1),
-                          np.mean(list(dis_ang.values()), axis = 1),
-                          np.mean(list(dis_dis.values()), axis = 1),
+    all_data = np.transpose(np.vstack((np.mean(list(thicknesses.values()), axis = 1),
+                                       np.std(list(thicknesses.values()), axis = 1),
+                          np.mean(list(angles.values()), axis = 1),
+                          np.std(list(angles.values()), axis = 1),
+                          np.mean(list(distances.values()), axis = 1),
+                          np.std(list(distances.values()), axis = 1)
                           )))
 #    df = pd.DataFrame(all_data)
     lip_resnames = group.resnames
@@ -260,18 +323,26 @@ for group in Leaflets:
 #    df = pd.concat([df, pd.DataFrame(lip_resnames),pd.DataFrame(lip_resids)], axis = 1)
 #    df.to_csv(os.path.sep.join(["output", f"CG_dian_leaflet{i}.csv"]), index = False, header = False)
     
-    matrix3D = [list(dis_thick.values()),
-             list(dis_ang.values()),
-             list(dis_dis.values()),
+    matrix3D = [list(thicknesses.values()),
+             list(angles.values()),
+             list(distances.values()),
              ]
     labels = [list(lip_resnames),
              list(lip_resids)]
-    np.save(f'output/large_real_set_dian_DOPC_DPPC_3D_leaflet{i}.npy',matrix3D)
-    np.save(f'output/large_real_set_dian_DOPC_DPPC_3D_leaflet{i}_labels.npy',labels)
-
+    np.save(f'output/real_set_protein_mean_leaflet{i}_20.npy',all_data)
+    np.save(f'output/real_set_protein_mean_leaflet{i}_labels_20.npy',labels)
 
     
     positions = group.positions[:,0:2]
     pf = pd.concat([pd.DataFrame(positions), pd.DataFrame(lip_resnames),pd.DataFrame(lip_resids)], axis = 1)    
-    pf.to_csv(os.path.sep.join(["output", f"large_real_dian_DOPC_DPPC_3D_positions_leaflet{i}.csv"]), index = False, header = False)    
+    pf.to_csv(os.path.sep.join(["output", f"real_set_protein_mean_positions_leaflet{i}_20.csv"]), index = False, header = False)    
     i +=1
+    
+structure = os.path.sep.join(["/media/adam/My Passport1/CG protein/di-4/MD/step8_3_production_dian.gro"])
+tpr = os.path.sep.join(["/media/adam/My Passport1/CG protein/di-4/MD/step8_3_production_dian.tpr"])
+trajectory = os.path.sep.join(["/media/adam/My Passport1/CG protein/di-4/MD/step8_3_production_dian.xtc"])
+
+structure = os.path.sep.join(["/media/adam/My Passport1/CG protein/MD/step7.2_production.gro"])
+tpr = os.path.sep.join(["/media/adam/My Passport1/CG protein/MD/step7.2_production.tpr"])
+trajectory = os.path.sep.join(["/media/adam/My Passport1/CG protein/MD/step7.2_production.trr"])
+
