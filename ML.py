@@ -206,12 +206,12 @@ def find_variables(lipid_resnames, lipids, sn_dic, thicknesses, angles, distance
     
     
     
-lipid_resnames= ['DOPC','DPPC']
+lipid_resnames= ['DOPC']
 
 for lipid_type in lipid_resnames:
-    structure = os.path.sep.join([f"/media/adam/My Passport/Data Backup/Data/simulations/ML/Training datsets/{lipid_type}_CHOL/step7_production.gro"])
-    tpr = os.path.sep.join([f"/media/adam/My Passport/Data Backup/Data/simulations/ML/Training datsets/{lipid_type}_CHOL/step7_production.tpr"])
-    trajectory = os.path.sep.join([f"/media/adam/My Passport/Data Backup/Data/simulations/ML/Training datsets/{lipid_type}_CHOL/step7_production.xtc"])
+    structure = os.path.sep.join([f"/media/adam/My Passport/Data Backup/Data/simulations/ML/Training datsets/disorderd{lipid_type}/step7.1_production.gro"])
+    tpr = os.path.sep.join([f"/media/adam/My Passport/Data Backup/Data/simulations/ML/Training datsets/disorderd{lipid_type}/step7.1_production.tpr"])
+    trajectory = os.path.sep.join([f"/media/adam/My Passport/Data Backup/Data/simulations/ML/Training datsets/disorderd{lipid_type}/step7.1_production.xtc"])
         
     Dic = find_sn([lipid_type],tpr)
     u = MDAnalysis.Universe(structure, trajectory)
@@ -257,8 +257,8 @@ for lipid_type in lipid_resnames:
                  dis,
                  ]
     label = [f'{lipid_type} CHOL'] * len(thick)
-    np.save(f'output/train_set_{lipid_type}_CHOL_3D.npy',matrix3D)
-    np.save(f'output/train_set_{lipid_type}_CHOL_3D_label.npy', label)
+    np.save(f'output/train_set_{lipid_type}_3D.npy',matrix3D)
+    np.save(f'output/train_set_{lipid_type}_3D_label.npy', label)
     #following code comment is for mean of each value for each lipid
     all_data = np.transpose(np.vstack((np.mean(thick, axis = 1),
                                        np.std(thick, axis = 1),
@@ -266,10 +266,10 @@ for lipid_type in lipid_resnames:
                           np.std(ang, axis = 1),
                           np.mean(dis, axis = 1),
                           np.std(dis, axis = 1),
-                          np.full([len(thick)], f'{lipid_type} CHOL')
+                          np.full([len(thick)], f'{lipid_type}')
                           )))
     df = pd.DataFrame(all_data)   
-    df.to_csv(os.path.sep.join(["output", f"train_set_{lipid_type}_CHOL_mean.csv"]), index = False, header = False)
+    df.to_csv(os.path.sep.join(["output", f"train_set_{lipid_type}_mean.csv"]), index = False, header = False)
    
 lipid_resnames = ['DAPE','DLPE','DOPE','DPPE', 'POPE', 'PIPE', 'DPPC', 'PIPC', 'PAPC', 'POPC', 'PAPS', 'POPS', 'PGPS', 'DBSM', 'DXSM', 'DPSM']
 structure = os.path.sep.join(["/media/adam/My Passport/CG dian_laurd_backup from drive/laurdan/md_laurdan_coarse_part5.gro"])
@@ -307,7 +307,7 @@ for group in Leaflets:
     #If i want to do it over a trajectory uncomment the next line and indent everything between that loop and the next comment
     print('got here2')
 
-    for tf in tqdm.tqdm(u.trajectory[-20:-1:1]):
+    for tf in tqdm.tqdm(u.trajectory[-30:-1:1]):
         find_variables(lipid_resnames,lipids,Dic,thicknesses,angles,distances)
     #stop indent here
     all_data = np.transpose(np.vstack((np.mean(list(thicknesses.values()), axis = 1),
@@ -329,13 +329,13 @@ for group in Leaflets:
              ]
     labels = [list(lip_resnames),
              list(lip_resids)]
-    np.save(f'output/real_set_simple_laurdan_mean_leaflet{i}_24.npy',all_data)
-    np.save(f'output/real_set_simple_laurdan_mean_leaflet{i}_labels_24.npy',labels)
+    np.save(f'output/di4_protein_mean_leaflet{i}_30.npy',all_data)
+    np.save(f'output/di4_protein_mean_leaflet{i}_labels_30.npy',labels)
 
     
     positions = group.positions[:,0:2]
     pf = pd.concat([pd.DataFrame(positions), pd.DataFrame(lip_resnames),pd.DataFrame(lip_resids)], axis = 1)    
-    pf.to_csv(os.path.sep.join(["output", f"real_set_simple_laurdan_mean_leaflet{i}_24.csv"]), index = False, header = False)    
+    pf.to_csv(os.path.sep.join(["output", f"di4_protein_mean_leaflet{i}_30.csv"]), index = False, header = False)    
     i +=1
     
 structure = os.path.sep.join(["/media/adam/My Passport1/CG protein/di-4/MD/step8_3_production_dian.gro"])
