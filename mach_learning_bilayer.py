@@ -45,7 +45,7 @@ def plot_history(histories, key='binary_crossentropy'):
 
 
 np.set_printoptions(suppress=True)
-DOPC_train = pd.read_csv('output/train_set_DOPC_mean.csv', header = None)
+DOPC_train = pd.read_csv('output/train_set_DOPC_CHOL_mean.csv', header = None)
 DPPC_train = pd.read_csv('output/train_set_DPPC_CHOL_mean.csv', header = None)
 dataset_train = pd.concat([DOPC_train,DPPC_train], axis = 0).values
 X = dataset_train[:,0:6]
@@ -96,7 +96,6 @@ X_test = scaler.transform(X_test)
 
 
 opt = SGD(lr=config.MIN_LR, momentum=0.9)
-
 #making the ML model
 model = Sequential()
 #model.add(Conv2D(32,kernel_size=(3,3),input_shape=(X_train.shape), activation='relu'))
@@ -105,12 +104,12 @@ model.add(Dense(24,input_dim = 6, activation = 'relu'))
 
 #model.add(Dropout(0.1))
 
-model.add(Dropout(0.1))
+model.add(Dropout(0.2))
 #model.add(Dense(24,activation='relu'))
 model.add(Dense(12, activation = 'relu'))
 #model.add(Dropout(0.05))
 #model.add(Flatten())
-model.add(Dropout(0.05))
+#model.add(Dropout(0.05))
 model.add(Dense(2, activation='softmax'))
 
 model.compile(loss='binary_crossentropy', 
@@ -171,7 +170,7 @@ prediction_ = encoder.inverse_transform(prediction_)
 unique_elements, count_elements = np.unique(prediction_, return_counts=True)
 
 #Plotting prediction on real set
-CG_pos= pd.read_csv('output/di4_real_protein_mean_positions_leaflet1.csv', header = None, names = ['X','Y','Lipid type','resid'])
+CG_pos= pd.read_csv('output/di4_protein_mean_positions_leaflet0_30.csv', header = None, names = ['X','Y','Lipid type','resid'])
 #DPPC_pos = pd.read_csv('output/positions_DPPC.csv', header = None, names = ['X','Y','Lipid type'])
 #dataset_pos = pd.concat([DOPC_pos,DPPC_pos], axis = 0).values
 pred_df = pd.DataFrame(prediction_, index = None).values
@@ -180,7 +179,8 @@ dataset_whole = pd.DataFrame(np.concatenate([CG_pos.values,pred_df], axis = 1), 
 g = sns.relplot(x='X',y='Y',hue='Order', data = dataset_whole, s =10, kind = 'scatter')
 g.fig.set_size_inches(15,15)
 
-dataset_whole.to_csv('output/di4_protein_mean_leaflet0_30.csv')
+
+dataset_whole.to_csv('output/di4_protein_mean_leaflet0_30_dataset.csv')
 g.savefig('output/di4_protein_mean_leaflet0_30.png',dpi=300)
 
 
@@ -224,6 +224,7 @@ maxima = max(predictions)
 norm = mpl.colors.Normalize(vmin=minima, vmax=maxima, clip=True)
 
 mapper = cm.ScalarMappable(norm=norm,cmap=cm.seismic)
+mpl.rcParams.update({'font.size': 20})
 
 patch = [mpatches.Patch(color = mapper.to_rgba(minima)), mpatches.Patch(color = mapper.to_rgba(maxima))]
 K = CG_pos.iloc[:,:2].values
@@ -233,7 +234,7 @@ for i in range(len(real_type)):
     if real_type[i] == 'DOPC':
         real_type_num[i] = 0
     if real_type[i] =='DPPC':
-        real_type_num[i] = 1
+        real_type_num[i] = 1        
         
         
 vor = Voronoi(K)
@@ -242,18 +243,21 @@ for r in range(len(vor.point_region)):
     region = vor.regions[vor.point_region[r]]
     if not -1 in region:
         polygon = [vor.vertices[i] for i in region]
-        plt.fill(*zip(*polygon), color=mapper.to_rgba(predictions[r]))
-plt.xlim([0,2500]), plt.ylim([0,2500])
+        plt.fill(*zip(*polygon), color=mapper.to_rgba(real_type_num[r]))
+plt.xlim([0,2250]), plt.ylim([0,2250])
 plt.xlabel('x'), plt.ylabel('y')
 plt.legend(patch,["Disordered","Ordered"], bbox_to_anchor=(0.5, 1.1), ncol=2, loc='upper center')
 
 fig.set_size_inches(15,15)
 plt.show()
-fig.savefig('output/voronoi__predicted_di4_protein_mean_leaflet0_30.png',dpi=300)
+fig.savefig('output/real_large_protein.png',dpi=500)
+
+
 ordered = dataset_whole[dataset_whole['Order']=='DPPC CHOL']
-disordered = dataset_whole[dataset_whole['Order']=='DOPC']
-np.unique(ordered['Lipid Type'], return_counts=True)
-np.unique(disordered['Lipid Type'], return_counts=True)
+disordered = dataset_whole[dataset_whole['Order']=='DOPC CHOL']
+un, cou = np.unique(ordered['Lipid Type'], return_counts=True)
+un, cou = np.unique(disordered['Lipid Type'], return_counts=True)
+
 
 
 

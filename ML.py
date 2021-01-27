@@ -335,7 +335,8 @@ for group in Leaflets:
     
     positions = group.positions[:,0:2]
     pf = pd.concat([pd.DataFrame(positions), pd.DataFrame(lip_resnames),pd.DataFrame(lip_resids)], axis = 1)    
-    pf.to_csv(os.path.sep.join(["output", f"di4_protein_mean_leaflet{i}_30.csv"]), index = False, header = False)    
+    pf.to_csv(os.path.sep.join(["output", f"di4_protein_mean_leaflet{i}_30.csv"]), index = False, header = False)
+    break    
     i +=1
     
 structure = os.path.sep.join(["/media/adam/My Passport1/CG protein/di-4/MD/step8_3_production_dian.gro"])
